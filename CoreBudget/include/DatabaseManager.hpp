@@ -1,11 +1,16 @@
 #pragma once
-#include "ITransaction.hpp"
-#include <vector>
-#include <memory>
+#include "Wallet.hpp"
 #include <string>
 
 class DatabaseManager {
 public:
-    void saveToBinaryFile(const std::vector<std::unique_ptr<ITransaction>>& transactions, const std::string& filename, const std::string& password);
-    std::vector<std::unique_ptr<ITransaction>> loadFromBinaryFile(const std::string& filename, const std::string& password);
+    // Zapisuje cały portfel (transakcje + cele) do zaszyfrowanego pliku binarnego
+    void saveWallet(const Wallet& wallet,
+                    const std::string& filename,
+                    const std::string& password);
+
+    // Wczytuje cały portfel (transakcje + cele) z zaszyfrowanego pliku binarnego
+    void loadWallet(Wallet& wallet,
+                    const std::string& filename,
+                    const std::string& password);
 };

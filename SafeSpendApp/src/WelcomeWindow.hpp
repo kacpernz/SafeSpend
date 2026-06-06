@@ -3,22 +3,20 @@
 #include <QLineEdit>
 #include <QPushButton>
 #include <QLabel>
-#include <vector>
-#include <memory>
-#include "ITransaction.hpp"
+#include "Wallet.hpp"
 
 class WelcomeWindow : public QWidget {
     Q_OBJECT
 
 private:
-    QLineEdit* passwordInput;
+    QLineEdit*   passwordInput;
     QPushButton* loginButton;
     QPushButton* createButton;
     QLabel*      statusLabel;
 
     void onLoginClicked();
     void onCreateWalletClicked();
-    void launchMainWindow(std::vector<std::unique_ptr<ITransaction>> data);
+    void launchMainWindow(Wallet&& wallet);
 
 public:
     explicit WelcomeWindow(QWidget* parent = nullptr);

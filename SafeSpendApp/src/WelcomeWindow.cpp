@@ -179,7 +179,6 @@ WelcomeWindow::WelcomeWindow(QWidget* parent)
     // ── connections ───────────────────────────────────────────────────────────
     connect(loginButton,  &QPushButton::clicked, this, &WelcomeWindow::onLoginClicked);
     connect(createButton, &QPushButton::clicked, this, &WelcomeWindow::onCreateWalletClicked);
-    // Enter in password field triggers login
     connect(passwordInput, &QLineEdit::returnPressed, this, &WelcomeWindow::onLoginClicked);
 }
 
@@ -210,8 +209,9 @@ void WelcomeWindow::onLoginClicked() {
 
     DatabaseManager dbManager;
     try {
-        auto loadedData = dbManager.loadFromBinaryFile("finanse_baza.bin", password.toStdString());
-        launchMainWindow(std::move(loadedData));
+        Wallet loadedWallet;
+        dbManager.loadWallet(loadedWallet, "finanse_baza.bin", password.toStdString());
+        launchMainWindow(std::move(loadedWallet));
     } catch (const DatabaseException& e) {
         statusLabel->setStyleSheet("background: transparent; color: #ff6b6b;");
         statusLabel->setText(QString("✗  Nieprawidłowe hasło lub uszkodzony plik."));
@@ -229,7 +229,6 @@ void WelcomeWindow::onCreateWalletClicked() {
         return;
     }
 
-    // Ask for confirmation password
     bool ok = false;
     QString confirm = QInputDialog::getText(
         this,
@@ -249,10 +248,10 @@ void WelcomeWindow::onCreateWalletClicked() {
     }
 
     DatabaseManager dbManager;
-    std::vector<std::unique_ptr<ITransaction>> emptyData;
+    Wallet emptyWallet;
 
     try {
-        dbManager.saveToBinaryFile(emptyData, "finanse_baza.bin", password.toStdString());
+        dbManager.saveWallet(emptyWallet, "finanse_baza.bin", password.toStdString());
     } catch (const DatabaseException& e) {
         QMessageBox::critical(
             this,
@@ -265,16 +264,14 @@ void WelcomeWindow::onCreateWalletClicked() {
 
     statusLabel->setStyleSheet("background: transparent; color: #06d6a0;");
     statusLabel->setText("✔  Portfel utworzony pomyślnie!");
-    launchMainWindow(std::move(emptyData));
+    launchMainWindow(std::move(emptyWallet));
 }
 
-// ─── launch MainWindow and hide self ──────────────────────────────────────────
-void WelcomeWindow::launchMainWindow(std::vector<std::unique_ptr<ITransaction>> data) {
-    // MainWindow is top-level (no parent) so Qt won't delete it when we hide.
-    // We connect its destroyed() signal to quit the application.
+// ─── launch MainWindow and hide self ─────────────────────────────────────────
+void WelcomeWindow::launchMainWindow(Wallet&& wallet) {
     MainWindow* mainWin = new MainWindow();
     mainWin->setAttribute(Qt::WA_DeleteOnClose);
-    mainWin->loadWalletData(std::move(data));
+    mainWin->loadWalletData(std::move(wallet));
 
     connect(mainWin, &QObject::destroyed, qApp, &QCoreApplication::quit);
 

@@ -10,10 +10,11 @@ class AddTransactionDialog : public QDialog {
     Q_OBJECT
 
 private:
-    QComboBox*     typeComboBox;
+    QComboBox*      typeComboBox;
     QDoubleSpinBox* amountSpinBox;
-    QLineEdit*     categoryLineEdit;
-    QCheckBox*     recurringCheckBox;
+    QLineEdit*      categoryLineEdit;
+    QCheckBox*      recurringCheckBox;
+    QComboBox*      accountComboBox;
 
 public:
     AddTransactionDialog(QWidget* parent = nullptr);
@@ -22,4 +23,5 @@ public:
     double  getAmount()          const;
     QString getCategory()        const;
     bool    getIsRecurring()     const;
+    QString getAccountName()     const;
 };
