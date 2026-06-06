@@ -13,10 +13,15 @@ private:
     QPushButton* loginButton;
     QPushButton* createButton;
     QLabel*      statusLabel;
+    QLabel*      m_iconLabel;      // przechowujemy bezpośrednio, bez wyszukiwania
+    QPushButton* themeToggleBtn;
 
     void onLoginClicked();
     void onCreateWalletClicked();
     void launchMainWindow(Wallet&& wallet);
+
+private slots:
+    void onThemeChanged(bool isDark);
 
 public:
     explicit WelcomeWindow(QWidget* parent = nullptr);
@@ -24,3 +29,4 @@ public:
 protected:
     void paintEvent(QPaintEvent* event) override;
 };
+

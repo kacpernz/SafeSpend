@@ -2,6 +2,7 @@
 #include "MainWindow.hpp"
 #include "DatabaseManager.hpp"
 #include "DatabaseException.hpp"
+#include "ThemeManager.hpp"
 
 #include <QApplication>
 #include <QVBoxLayout>
@@ -17,7 +18,7 @@
 #include <QFont>
 #include <QGraphicsDropShadowEffect>
 
-// ─── helper: create a subtle glow/shadow for a widget ────────────────────────
+// ─── helper: shadow ───────────────────────────────────────────────────────────
 static void addShadow(QWidget* w, QColor color = QColor(0, 0, 0, 120), int blur = 18) {
     auto* effect = new QGraphicsDropShadowEffect(w);
     effect->setBlurRadius(blur);
@@ -31,23 +32,48 @@ WelcomeWindow::WelcomeWindow(QWidget* parent)
     : QWidget(parent)
 {
     setWindowTitle("SafeSpend");
-    setFixedSize(420, 520);
+    setFixedSize(420, 540);
     setAttribute(Qt::WA_DeleteOnClose);
 
     // ── root layout ──────────────────────────────────────────────────────────
     QVBoxLayout* root = new QVBoxLayout(this);
-    root->setContentsMargins(48, 48, 48, 40);
+    root->setContentsMargins(48, 40, 48, 32);
     root->setSpacing(0);
 
-    // ── icon label (lock emoji rendered as large text) ────────────────────────
-    QLabel* iconLabel = new QLabel("🔐", this);
-    iconLabel->setAlignment(Qt::AlignHCenter);
-    QFont iconFont = iconLabel->font();
-    iconFont.setPointSize(52);
-    iconLabel->setFont(iconFont);
-    iconLabel->setStyleSheet("background: transparent; color: white;");
-    root->addWidget(iconLabel);
+    // ── Przycisk motywu (prawy górny róg) ────────────────────────────────────
+    QHBoxLayout* topBar = new QHBoxLayout();
+    topBar->addStretch();
 
+    themeToggleBtn = new QPushButton(ThemeManager::instance()->toggleButtonLabel(), this);
+    themeToggleBtn->setFixedHeight(30);
+    themeToggleBtn->setCursor(Qt::PointingHandCursor);
+    themeToggleBtn->setStyleSheet(R"(
+        QPushButton {
+            background: rgba(255,255,255,0.10);
+            color: #94a3b8;
+            border: 1px solid rgba(255,255,255,0.18);
+            border-radius: 8px;
+            font-size: 12px;
+            font-weight: bold;
+            padding: 0 12px;
+        }
+        QPushButton:hover {
+            background: rgba(255,255,255,0.18);
+            color: white;
+        }
+    )");
+    topBar->addWidget(themeToggleBtn);
+    root->addLayout(topBar);
+    root->addSpacing(8);
+
+    // ── icon label ────────────────────────────────────────────────────
+    m_iconLabel = new QLabel("🔐", this);
+    m_iconLabel->setAlignment(Qt::AlignHCenter);
+    QFont iconFont = m_iconLabel->font();
+    iconFont.setPointSize(52);
+    m_iconLabel->setFont(iconFont);
+    m_iconLabel->setStyleSheet("background: transparent; color: white;");
+    root->addWidget(m_iconLabel);
     root->addSpacing(16);
 
     // ── main title ────────────────────────────────────────────────────────────
@@ -61,7 +87,6 @@ WelcomeWindow::WelcomeWindow(QWidget* parent)
     titleLabel->setStyleSheet("background: transparent; color: #ffffff; letter-spacing: 1px;");
     addShadow(titleLabel, QColor(13, 110, 253, 160), 24);
     root->addWidget(titleLabel);
-
     root->addSpacing(6);
 
     // ── subtitle ──────────────────────────────────────────────────────────────
@@ -73,7 +98,6 @@ WelcomeWindow::WelcomeWindow(QWidget* parent)
     subtitleLabel->setFont(subFont);
     subtitleLabel->setStyleSheet("background: transparent; color: #9baacf;");
     root->addWidget(subtitleLabel);
-
     root->addSpacing(36);
 
     // ── password input ────────────────────────────────────────────────────────
@@ -96,10 +120,9 @@ WelcomeWindow::WelcomeWindow(QWidget* parent)
         }
     )");
     root->addWidget(passwordInput);
-
     root->addSpacing(12);
 
-    // ── status label (inline error / info messages) ───────────────────────────
+    // ── status label ─────────────────────────────────────────────────────────
     statusLabel = new QLabel("", this);
     statusLabel->setAlignment(Qt::AlignHCenter);
     statusLabel->setWordWrap(true);
@@ -109,7 +132,6 @@ WelcomeWindow::WelcomeWindow(QWidget* parent)
     statusLabel->setStyleSheet("background: transparent; color: #ff6b6b;");
     statusLabel->setFixedHeight(36);
     root->addWidget(statusLabel);
-
     root->addSpacing(4);
 
     // ── login button ──────────────────────────────────────────────────────────
@@ -131,16 +153,13 @@ WelcomeWindow::WelcomeWindow(QWidget* parent)
             background: qlineargradient(x1:0, y1:0, x2:1, y2:0,
                 stop:0 #2277e8, stop:1 #1a6fdb);
         }
-        QPushButton:pressed {
-            background: #0a53be;
-        }
+        QPushButton:pressed { background: #0a53be; }
     )");
     addShadow(loginButton, QColor(13, 110, 253, 140), 20);
     root->addWidget(loginButton);
-
     root->addSpacing(12);
 
-    // ── create wallet button ──────────────────────────────────────────────────
+    // ── create button ─────────────────────────────────────────────────────────
     createButton = new QPushButton("  Utwórz nowy portfel", this);
     createButton->setFixedHeight(50);
     createButton->setCursor(Qt::PointingHandCursor);
@@ -159,12 +178,9 @@ WelcomeWindow::WelcomeWindow(QWidget* parent)
             border: 1.5px solid rgba(255, 255, 255, 0.55);
             background: rgba(255, 255, 255, 0.05);
         }
-        QPushButton:pressed {
-            background: rgba(255, 255, 255, 0.10);
-        }
+        QPushButton:pressed { background: rgba(255, 255, 255, 0.10); }
     )");
     root->addWidget(createButton);
-
     root->addStretch();
 
     // ── footer ────────────────────────────────────────────────────────────────
@@ -177,22 +193,52 @@ WelcomeWindow::WelcomeWindow(QWidget* parent)
     root->addWidget(footerLabel);
 
     // ── connections ───────────────────────────────────────────────────────────
-    connect(loginButton,  &QPushButton::clicked, this, &WelcomeWindow::onLoginClicked);
-    connect(createButton, &QPushButton::clicked, this, &WelcomeWindow::onCreateWalletClicked);
+    connect(loginButton,   &QPushButton::clicked, this, &WelcomeWindow::onLoginClicked);
+    connect(createButton,  &QPushButton::clicked, this, &WelcomeWindow::onCreateWalletClicked);
     connect(passwordInput, &QLineEdit::returnPressed, this, &WelcomeWindow::onLoginClicked);
+
+    // Przycisk motywu
+    connect(themeToggleBtn, &QPushButton::clicked, this, [this]() {
+        ThemeManager::instance()->toggleTheme();
+    });
+
+    // Reaguj na zmianę motywu (aktualizuj etykietę + odmaluj gradient)
+    connect(ThemeManager::instance(), &ThemeManager::themeChanged,
+            this, &WelcomeWindow::onThemeChanged);
 }
 
-// ─── custom gradient background ──────────────────────────────────────────────
+// ─── gradient background — dostosowany do aktywnego motywu ───────────────────
 void WelcomeWindow::paintEvent(QPaintEvent* event) {
     Q_UNUSED(event)
     QPainter painter(this);
     painter.setRenderHint(QPainter::Antialiasing);
 
     QLinearGradient gradient(0, 0, 0, height());
-    gradient.setColorAt(0.0, QColor("#0f1629"));
-    gradient.setColorAt(0.6, QColor("#111827"));
-    gradient.setColorAt(1.0, QColor("#0a0e1a"));
+    if (ThemeManager::instance()->isDark()) {
+        gradient.setColorAt(0.0, QColor("#0f1629"));
+        gradient.setColorAt(0.6, QColor("#111827"));
+        gradient.setColorAt(1.0, QColor("#0a0e1a"));
+    } else {
+        gradient.setColorAt(0.0, QColor("#dbeafe"));
+        gradient.setColorAt(0.6, QColor("#eff6ff"));
+        gradient.setColorAt(1.0, QColor("#f1f5f9"));
+    }
     painter.fillRect(rect(), gradient);
+}
+
+// ─── Reakcja na zmianę motywu ───────────────────────────────────────────────
+void WelcomeWindow::onThemeChanged(bool isDark) {
+    // Zaktualizuj etykietę przycisku
+    themeToggleBtn->setText(ThemeManager::instance()->toggleButtonLabel());
+    // Odmaluj gradient tła
+    update();
+
+    // Dostosuj kolor ikony do motywu
+    if (m_iconLabel) {
+        m_iconLabel->setStyleSheet(
+            isDark ? "background: transparent; color: white;"
+                   : "background: transparent; color: #1e3a8a;");
+    }
 }
 
 // ─── login slot ──────────────────────────────────────────────────────────────
@@ -231,13 +277,9 @@ void WelcomeWindow::onCreateWalletClicked() {
 
     bool ok = false;
     QString confirm = QInputDialog::getText(
-        this,
-        "Potwierdź hasło",
+        this, "Potwierdź hasło",
         "Powtórz hasło do nowego portfela:",
-        QLineEdit::Password,
-        QString(),
-        &ok
-    );
+        QLineEdit::Password, QString(), &ok);
 
     if (!ok) return;
 
@@ -253,12 +295,9 @@ void WelcomeWindow::onCreateWalletClicked() {
     try {
         dbManager.saveWallet(emptyWallet, "finanse_baza.bin", password.toStdString());
     } catch (const DatabaseException& e) {
-        QMessageBox::critical(
-            this,
-            "Błąd zapisu",
+        QMessageBox::critical(this, "Błąd zapisu",
             QString("Nie udało się utworzyć pliku portfela.\n\nSzczegóły: %1")
-                .arg(QString::fromStdString(e.what()))
-        );
+                .arg(QString::fromStdString(e.what())));
         return;
     }
 
@@ -267,7 +306,7 @@ void WelcomeWindow::onCreateWalletClicked() {
     launchMainWindow(std::move(emptyWallet));
 }
 
-// ─── launch MainWindow and hide self ─────────────────────────────────────────
+// ─── launch MainWindow ────────────────────────────────────────────────────────
 void WelcomeWindow::launchMainWindow(Wallet&& wallet) {
     MainWindow* mainWin = new MainWindow();
     mainWin->setAttribute(Qt::WA_DeleteOnClose);

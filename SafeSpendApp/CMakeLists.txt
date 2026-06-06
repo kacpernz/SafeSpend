@@ -12,6 +12,7 @@ set(SOURCES
     src/MainWindow.cpp
     src/AddTransactionDialog.cpp
     src/LoginDialog.cpp
+    src/ThemeManager.cpp
 )
 
 add_executable(SafeSpendApp ${SOURCES})

@@ -10,6 +10,7 @@
 #include <QVBoxLayout>
 #include <QVector>
 #include <QtCharts/QChartView>
+#include <QtCharts/QChart>
 #include <QtCharts/QPieSeries>
 #include <QtCharts/QBarSeries>
 #include <QtCharts/QBarSet>
@@ -38,10 +39,12 @@ private:
     QPushButton*   exportCsvButton;
 
     // ── Zakładka 2: Analiza ──────────────────────────────────────────────────
-    QChartView*    chartView;      // wykres kołowy
+    QChart*        pieChart;       // przechowujemy wskaźnik do ustawienia motywu
+    QChart*        barChart;
+    QChartView*    chartView;
     QPieSeries*    pieSeries;
-    QChartView*    barChartView;   // wykres słupkowy trendów
-    QWidget*       envelopeWidget; // budżetowanie kopertowe
+    QChartView*    barChartView;
+    QWidget*       envelopeWidget;
     QVBoxLayout*   envelopeLayout;
 
     // ── Zakładka 3: Cele oszczędnościowe ─────────────────────────────────────
@@ -52,6 +55,9 @@ private:
     // ── Zakładka 4: Konta (subkonta) ─────────────────────────────────────────
     QWidget*       accountsWidget;
     QVBoxLayout*   accountsLayout;
+
+    // ── Przycisk motywu (toolbar) ─────────────────────────────────────────────
+    QPushButton*   themeToggleBtn;
 
     // ── Metody wewnętrzne ─────────────────────────────────────────────────────
     void updateChart();
@@ -65,9 +71,10 @@ private:
     void checkRecurringTransactions();
     void refreshGoalsTab();
     QPushButton* makeButton(const QString& text, const QString& color);
-
-    // Pomocnik: odświeża wszystko po zmianie danych
     void refreshAll();
+
+private slots:
+    void onThemeChanged(bool isDark);   // Cel 4: aktualizuje QChart theme
 
 public:
     MainWindow(QWidget* parent = nullptr);
