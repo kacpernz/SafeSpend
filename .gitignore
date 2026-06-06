@@ -1,0 +1,13 @@
+# Foldery systemów budowania
+build/
+.cmake/
+
+# Pliki systemowe macOS
+.DS_Store
+
+# Pliki wygenerowane przez program
+*.bin
+*.csv
+
+# Pliki IDE
+.vscode/
