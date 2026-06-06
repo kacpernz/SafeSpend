@@ -8,7 +8,7 @@
 #include <cstring>
 
 // ═══════════════════════════════════════════════════════════════════════════════
-//  Format pliku binarnego (v2):
+//  Format pliku binarnego (v3):
 //
 //  [SEKCJA TRANSAKCJI]
 //    Liczba transakcji : size_t
@@ -26,6 +26,12 @@
 //      name            : size_t (długość) + chars
 //      targetAmount    : double
 //      currentAmount   : double
+//
+//  [SEKCJA LIMITÓW KATEGORII]  ← NOWE (v3)
+//    Liczba limitów    : size_t
+//    Dla każdego limitu:
+//      categoryName    : size_t (długość) + chars
+//      limitValue      : double
 // ═══════════════════════════════════════════════════════════════════════════════
 
 void DatabaseManager::saveWallet(const Wallet& wallet,
@@ -86,6 +92,15 @@ void DatabaseManager::saveWallet(const Wallet& wallet,
         appendString(g.name);
         appendDouble(g.targetAmount);
         appendDouble(g.currentAmount);
+    }
+
+    // ── SEKCJA LIMITÓW KATEGORII ──────────────────────────────────────────────
+    const auto& limits = wallet.getCategoryLimits();
+    appendSizeT(limits.size());
+
+    for (const auto& kv : limits) {
+        appendString(kv.first);
+        appendDouble(kv.second);
     }
 
     // ── Szyfrowanie i zapis ──────────────────────────────────────────────────
@@ -164,8 +179,8 @@ void DatabaseManager::loadWallet(Wallet& wallet,
         if (index >= static_cast<size_t>(size))
             throw DatabaseException("Plik jest uszkodzony lub podano bledne haslo!");
 
-        char type = buffer[index++];
-        double amount      = readDouble();
+        char type      = buffer[index++];
+        double amount  = readDouble();
         std::string cat    = readString();
         std::string date   = readString();
 
@@ -195,6 +210,17 @@ void DatabaseManager::loadWallet(Wallet& wallet,
             g.targetAmount  = readDouble();
             g.currentAmount = readDouble();
             wallet.addGoal(g);
+        }
+    }
+
+    // ── SEKCJA LIMITÓW KATEGORII ──────────────────────────────────────────────
+    if (index < static_cast<size_t>(size)) {
+        size_t limitCount = readSizeT();
+        for (size_t i = 0; i < limitCount; ++i) {
+            std::string catName = readString();
+            double      lim     = readDouble();
+            if (lim > 0.0)
+                wallet.setCategoryLimit(catName, lim);
         }
     }
 

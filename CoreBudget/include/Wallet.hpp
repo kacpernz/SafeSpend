@@ -1,6 +1,7 @@
 #pragma once
 #include "ITransaction.hpp"
 #include <vector>
+#include <map>
 #include <memory>
 #include <string>
 
@@ -15,6 +16,7 @@ class Wallet {
 private:
     std::vector<std::unique_ptr<ITransaction>> transactions;
     std::vector<Goal>                          goals;
+    std::map<std::string, double>              categoryLimits;
 
 public:
     // ── Transakcje ───────────────────────────────────────────────────────────
@@ -23,9 +25,18 @@ public:
     const std::vector<std::unique_ptr<ITransaction>>& getTransactions() const;
     void clear();
 
+    // ── Subkonta ─────────────────────────────────────────────────────────────
+    // Zwraca mapę: accountName → saldo (Income dodaje, Expense odejmuje)
+    std::map<std::string, double> getAccountBalances() const;
+
     // ── Cele oszczędnościowe ─────────────────────────────────────────────────
     void   addGoal(const Goal& goal);
-    bool   fundGoal(size_t index, double amount); // zwraca false jeśli brak salda
+    bool   fundGoal(size_t index, double amount);
     const std::vector<Goal>& getGoals() const;
     std::vector<Goal>&       getGoalsMutable();
+
+    // ── Limity kopertowe ─────────────────────────────────────────────────────
+    void setCategoryLimit(const std::string& category, double limit);
+    void removeCategoryLimit(const std::string& category);
+    const std::map<std::string, double>& getCategoryLimits() const;
 };

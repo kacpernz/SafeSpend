@@ -9,8 +9,12 @@
 #include <QVBoxLayout>
 #include <QHBoxLayout>
 #include <QGridLayout>
+#include <QFormLayout>
 #include <QSplitter>
 #include <QWidget>
+#include <QDialog>
+#include <QDialogButtonBox>
+#include <QDoubleSpinBox>
 #include <QMessageBox>
 #include <QHeaderView>
 #include <QDate>
@@ -22,6 +26,7 @@
 #include <QInputDialog>
 #include <QScrollArea>
 #include <QFrame>
+#include <QLabel>
 #include <cmath>
 #include <algorithm>
 
@@ -38,14 +43,6 @@
 //  Stałe
 // ═══════════════════════════════════════════════════════════════════════════════
 static constexpr double MONTHLY_BUDGET_LIMIT = 5000.0;
-
-// Limity kopertowe dla kategorii (case-insensitive matching)
-static const QMap<QString, double> ENVELOPE_LIMITS = {
-    {"Jedzenie",   800.0},
-    {"Rata",      1500.0},
-    {"Transport",  400.0},
-    {"Rozrywka",   300.0},
-};
 
 // ═══════════════════════════════════════════════════════════════════════════════
 //  Pomocnicze
@@ -70,12 +67,23 @@ QPushButton* MainWindow::makeButton(const QString& text, const QString& color) {
     return btn;
 }
 
+void MainWindow::refreshAll() {
+    refreshTable();
+    updateBalanceDisplay();
+    updateBudgetBar();
+    updateChart();
+    updateBarChart();
+    updateEnvelopeBudgets();
+    refreshGoalsTab();
+    refreshAccountsTab();
+}
+
 // ═══════════════════════════════════════════════════════════════════════════════
 //  Konstruktor
 // ═══════════════════════════════════════════════════════════════════════════════
 MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent) {
     setWindowTitle("SafeSpend");
-    resize(1000, 700);
+    resize(1100, 720);
 
     // ── Centralny widget + layout ────────────────────────────────────────────
     QWidget* centralWidget = new QWidget(this);
@@ -93,11 +101,11 @@ MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent) {
         QTabBar::tab {
             background: #1e293b;
             color: #94a3b8;
-            padding: 10px 28px;
+            padding: 10px 22px;
             font-size: 13px;
             font-weight: bold;
             border: none;
-            min-width: 120px;
+            min-width: 110px;
         }
         QTabBar::tab:selected {
             background: #0d6efd;
@@ -226,19 +234,40 @@ MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent) {
     QWidget*     tab2    = new QWidget(this);
     QVBoxLayout* layout2 = new QVBoxLayout(tab2);
     layout2->setContentsMargins(12, 12, 12, 12);
-    layout2->setSpacing(12);
+    layout2->setSpacing(10);
 
-    // ── Nagłówek ─────────────────────────────────────────────────────────────
+    // ── Nagłówek + przycisk limitów ──────────────────────────────────────────
+    QHBoxLayout* analysisHeader = new QHBoxLayout();
     QLabel* analysisTitle = new QLabel("📊  Analiza finansów", tab2);
     analysisTitle->setStyleSheet(
         "color: #e2e8f0; font-size: 16px; font-weight: bold; padding: 4px;");
-    layout2->addWidget(analysisTitle);
 
-    // ── Górny podział: wykres kołowy | wykres słupkowy ───────────────────────
+    QPushButton* limitsBtn = new QPushButton("⚙  Zarządzaj limitami", tab2);
+    limitsBtn->setFixedHeight(36);
+    limitsBtn->setCursor(Qt::PointingHandCursor);
+    limitsBtn->setStyleSheet(R"(
+        QPushButton {
+            background-color: #334155;
+            color: #e2e8f0;
+            border: 1px solid #475569;
+            border-radius: 7px;
+            font-size: 12px;
+            font-weight: bold;
+            padding: 0 14px;
+        }
+        QPushButton:hover   { background-color: #475569; color: white; }
+        QPushButton:pressed { background-color: #1e293b; }
+    )");
+
+    analysisHeader->addWidget(analysisTitle);
+    analysisHeader->addStretch();
+    analysisHeader->addWidget(limitsBtn);
+    layout2->addLayout(analysisHeader);
+
+    // ── Wykres kołowy | wykres słupkowy ──────────────────────────────────────
     QSplitter* chartSplitter = new QSplitter(Qt::Horizontal, tab2);
     chartSplitter->setStyleSheet("QSplitter::handle { background: #334155; width: 2px; }");
 
-    // Wykres kołowy
     pieSeries = new QPieSeries(this);
     QChart* pieChart = new QChart();
     pieChart->addSeries(pieSeries);
@@ -253,9 +282,8 @@ MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent) {
     chartView = new QChartView(pieChart, this);
     chartView->setRenderHint(QPainter::Antialiasing);
     chartView->setStyleSheet("background: #111827; border: none;");
-    chartView->setMinimumHeight(280);
+    chartView->setMinimumHeight(260);
 
-    // Wykres słupkowy
     QChart* barChart = new QChart();
     barChart->setTitle("Przychody vs Wydatki (miesiące)");
     barChart->setTitleFont(QFont("Arial", 12, QFont::Bold));
@@ -268,7 +296,7 @@ MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent) {
     barChartView = new QChartView(barChart, this);
     barChartView->setRenderHint(QPainter::Antialiasing);
     barChartView->setStyleSheet("background: #111827; border: none;");
-    barChartView->setMinimumHeight(280);
+    barChartView->setMinimumHeight(260);
 
     chartSplitter->addWidget(chartView);
     chartSplitter->addWidget(barChartView);
@@ -278,7 +306,7 @@ MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent) {
     // ── Separator ────────────────────────────────────────────────────────────
     QFrame* separator = new QFrame(tab2);
     separator->setFrameShape(QFrame::HLine);
-    separator->setStyleSheet("color: #334155; margin: 4px 0;");
+    separator->setStyleSheet("color: #334155; margin: 2px 0;");
     layout2->addWidget(separator);
 
     // ── Budżetowanie kopertowe ────────────────────────────────────────────────
@@ -309,7 +337,6 @@ MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent) {
         "color: #e2e8f0; font-size: 16px; font-weight: bold; padding: 4px;");
     layout3->addWidget(goalsTitle);
 
-    // Przyciski
     QHBoxLayout* goalsBtnRow = new QHBoxLayout();
     goalsBtnRow->setSpacing(10);
     QPushButton* newGoalBtn  = makeButton("🎯  Nowy cel",   "#0f7a4e");
@@ -324,23 +351,14 @@ MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent) {
     goalsBtnRow->addStretch();
     layout3->addLayout(goalsBtnRow);
 
-    // Scroll area z celami
     goalsScrollArea = new QScrollArea(tab3);
     goalsScrollArea->setWidgetResizable(true);
     goalsScrollArea->setStyleSheet(R"(
-        QScrollArea {
-            background: #111827;
-            border: none;
-        }
+        QScrollArea { background: #111827; border: none; }
         QScrollBar:vertical {
-            background: #1e293b;
-            width: 8px;
-            border-radius: 4px;
+            background: #1e293b; width: 8px; border-radius: 4px;
         }
-        QScrollBar::handle:vertical {
-            background: #334155;
-            border-radius: 4px;
-        }
+        QScrollBar::handle:vertical { background: #334155; border-radius: 4px; }
     )");
 
     goalsContainer = new QWidget();
@@ -354,6 +372,46 @@ MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent) {
     layout3->addWidget(goalsScrollArea);
 
     tabWidget->addTab(tab3, "🎯  Cele");
+
+    // ╔═══════════════════════════════════════════════════════════════════════╗
+    // ║  ZAKŁADKA 4 — Konta (subkonta)                                        ║
+    // ╚═══════════════════════════════════════════════════════════════════════╝
+    QWidget*     tab4    = new QWidget(this);
+    QVBoxLayout* layout4 = new QVBoxLayout(tab4);
+    layout4->setContentsMargins(16, 16, 16, 16);
+    layout4->setSpacing(12);
+
+    QLabel* accountsTitle = new QLabel("🏦  Stan subkont", tab4);
+    accountsTitle->setStyleSheet(
+        "color: #e2e8f0; font-size: 16px; font-weight: bold; padding: 4px;");
+    layout4->addWidget(accountsTitle);
+
+    QLabel* accountsHint = new QLabel(
+        "Poniżej widoczny jest aktualny stan środków na każdym koncie.", tab4);
+    accountsHint->setStyleSheet("color: #64748b; font-size: 12px; padding: 0 4px 8px 4px;");
+    layout4->addWidget(accountsHint);
+
+    QScrollArea* accountsScroll = new QScrollArea(tab4);
+    accountsScroll->setWidgetResizable(true);
+    accountsScroll->setStyleSheet(R"(
+        QScrollArea { background: #111827; border: none; }
+        QScrollBar:vertical {
+            background: #1e293b; width: 8px; border-radius: 4px;
+        }
+        QScrollBar::handle:vertical { background: #334155; border-radius: 4px; }
+    )");
+
+    accountsWidget = new QWidget();
+    accountsWidget->setStyleSheet("background: #111827;");
+    accountsLayout = new QVBoxLayout(accountsWidget);
+    accountsLayout->setContentsMargins(4, 4, 4, 4);
+    accountsLayout->setSpacing(10);
+    accountsLayout->addStretch();
+
+    accountsScroll->setWidget(accountsWidget);
+    layout4->addWidget(accountsScroll);
+
+    tabWidget->addTab(tab4, "🏦  Konta");
 
     // ═════════════════════════════════════════════════════════════════════════
     //  Połączenia sygnałów
@@ -383,17 +441,12 @@ MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent) {
                                               today.toStdString(), recurring,
                                               accountName.toStdString()));
             }
-            refreshTable();
-            updateBudgetBar();
-            updateChart();
-            updateBarChart();
-            updateEnvelopeBudgets();
-            updateBalanceDisplay();
+            refreshAll();
         }
     });
 
     // Zapis zaszyfrowany
-    connect(saveButton, &QPushButton::clicked, this, [this]() {
+    auto saveAction = [this]() {
         LoginDialog loginDialog(this);
         if (loginDialog.exec() == QDialog::Accepted) {
             DatabaseManager dbManager;
@@ -407,9 +460,14 @@ MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent) {
                     QString("Błąd zapisu: %1").arg(e.what()));
             }
         }
-    });
+    };
 
+    connect(saveButton,   &QPushButton::clicked, this, saveAction);
+    connect(saveGoalBtn,  &QPushButton::clicked, this, saveAction);
     connect(exportCsvButton, &QPushButton::clicked, this, &MainWindow::exportToCSV);
+
+    // Zarządzaj limitami
+    connect(limitsBtn, &QPushButton::clicked, this, &MainWindow::openLimitsDialog);
 
     // Nowy cel
     connect(newGoalBtn, &QPushButton::clicked, this, [this]() {
@@ -466,50 +524,18 @@ MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent) {
             return;
         }
 
-        // Dodaj wydatek (odejmuje z salda)
         QString goalExpCat = "Cel: " + QString::fromStdString(goals[idx].name);
         QString today = QDate::currentDate().toString("yyyy-MM-dd");
         wallet.addTransaction(
             std::make_unique<Expense>(amount, goalExpCat.toStdString(),
                                       today.toStdString(), false, "Oszczędności"));
-
-        // Zasil cel
         wallet.fundGoal(static_cast<size_t>(idx), amount);
 
-        refreshTable();
-        updateBudgetBar();
-        updateChart();
-        updateBarChart();
-        updateEnvelopeBudgets();
-        updateBalanceDisplay();
-        refreshGoalsTab();
-    });
-
-    // Zapisz (z zakładki celów)
-    connect(saveGoalBtn, &QPushButton::clicked, this, [this]() {
-        LoginDialog loginDialog(this);
-        if (loginDialog.exec() == QDialog::Accepted) {
-            DatabaseManager dbManager;
-            try {
-                dbManager.saveWallet(wallet, "finanse_baza.bin",
-                                     loginDialog.getPassword().toStdString());
-                QMessageBox::information(this, "Sukces",
-                    "✔  Dane zostały bezpiecznie zaszyfrowane i zapisane!");
-            } catch (const DatabaseException& e) {
-                QMessageBox::critical(this, "Błąd",
-                    QString("Błąd zapisu: %1").arg(e.what()));
-            }
-        }
+        refreshAll();
     });
 
     // Inicjalizacja wizualizacji
-    updateBalanceDisplay();
-    refreshTable();
-    updateBudgetBar();
-    updateChart();
-    updateBarChart();
-    updateEnvelopeBudgets();
-    refreshGoalsTab();
+    refreshAll();
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -518,17 +544,220 @@ MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent) {
 void MainWindow::loadWalletData(Wallet&& loadedWallet) {
     wallet = std::move(loadedWallet);
     checkRecurringTransactions();
-    refreshTable();
-    updateBalanceDisplay();
-    updateBudgetBar();
-    updateChart();
-    updateBarChart();
-    updateEnvelopeBudgets();
-    refreshGoalsTab();
+    refreshAll();
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
-//  Krok 1 — Aktualizacja paska budżetu miesięcznego
+//  Dialog zarządzania limitami kopertowymi
+// ═══════════════════════════════════════════════════════════════════════════════
+void MainWindow::openLimitsDialog() {
+    QDialog* dlg = new QDialog(this);
+    dlg->setWindowTitle("Zarządzaj limitami kategorii");
+    dlg->setMinimumWidth(440);
+    dlg->setAttribute(Qt::WA_DeleteOnClose);
+    dlg->setStyleSheet(R"(
+        QDialog {
+            background-color: #111827;
+        }
+        QLabel {
+            color: #94a3b8;
+            font-size: 13px;
+        }
+        QDoubleSpinBox {
+            background-color: #1e293b;
+            color: #e2e8f0;
+            border: 1px solid #334155;
+            border-radius: 6px;
+            padding: 5px 10px;
+            font-size: 13px;
+        }
+        QDoubleSpinBox:focus { border: 1px solid #3d8bfd; }
+        QLineEdit {
+            background-color: #1e293b;
+            color: #e2e8f0;
+            border: 1px solid #334155;
+            border-radius: 6px;
+            padding: 5px 10px;
+            font-size: 13px;
+        }
+        QLineEdit:focus { border: 1px solid #3d8bfd; }
+        QDialogButtonBox QPushButton {
+            background-color: #0d6efd;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            padding: 7px 20px;
+            font-size: 13px;
+            font-weight: bold;
+        }
+        QDialogButtonBox QPushButton:hover { background-color: #3d8bfd; }
+        QDialogButtonBox QPushButton[text="Cancel"] {
+            background-color: #334155;
+        }
+        QDialogButtonBox QPushButton[text="Cancel"]:hover {
+            background-color: #475569;
+        }
+    )");
+
+    QVBoxLayout* dlgLayout = new QVBoxLayout(dlg);
+    dlgLayout->setContentsMargins(20, 20, 20, 16);
+    dlgLayout->setSpacing(12);
+
+    QLabel* infoLabel = new QLabel(
+        "Ustaw miesięczne limity wydatków dla kategorii.\n"
+        "Kategoria z limitem 0 nie będzie wyświetlana w paskach kopertowych.", dlg);
+    infoLabel->setWordWrap(true);
+    infoLabel->setStyleSheet("color: #64748b; font-size: 12px;");
+    dlgLayout->addWidget(infoLabel);
+
+    // ── Sekcja istniejących limitów ───────────────────────────────────────────
+    QFrame* line1 = new QFrame(dlg);
+    line1->setFrameShape(QFrame::HLine);
+    line1->setStyleSheet("color: #334155;");
+    dlgLayout->addWidget(line1);
+
+    QLabel* existingTitle = new QLabel("Istniejące limity:", dlg);
+    existingTitle->setStyleSheet("color: #e2e8f0; font-weight: bold; font-size: 13px;");
+    dlgLayout->addWidget(existingTitle);
+
+    // Zbierz aktualne limity + spinboxy do mapy
+    const auto& currentLimits = wallet.getCategoryLimits();
+
+    // Zbierz też kategorie z transakcji (tylko Expense), których nie ma w limitach
+    QStringList allExpenseCategories;
+    for (const auto& t : wallet.getTransactions()) {
+        if (dynamic_cast<Expense*>(t.get())) {
+            QString cat = QString::fromStdString(t->getCategory());
+            if (!allExpenseCategories.contains(cat))
+                allExpenseCategories << cat;
+        }
+    }
+    // Dodaj też te, które już mają limity
+    for (const auto& kv : currentLimits) {
+        QString cat = QString::fromStdString(kv.first);
+        if (!allExpenseCategories.contains(cat))
+            allExpenseCategories << cat;
+    }
+    allExpenseCategories.sort();
+
+    // Mapa: nazwa kategorii → QDoubleSpinBox
+    QMap<QString, QDoubleSpinBox*> spinBoxes;
+
+    QFormLayout* formLayout = new QFormLayout();
+    formLayout->setSpacing(8);
+    formLayout->setLabelAlignment(Qt::AlignLeft | Qt::AlignVCenter);
+
+    for (const QString& cat : allExpenseCategories) {
+        QDoubleSpinBox* spin = new QDoubleSpinBox(dlg);
+        spin->setRange(0.0, 1000000.0);
+        spin->setDecimals(2);
+        spin->setSuffix(" PLN");
+        spin->setSingleStep(50.0);
+
+        auto it = currentLimits.find(cat.toStdString());
+        spin->setValue(it != currentLimits.end() ? it->second : 0.0);
+
+        spinBoxes[cat] = spin;
+        QLabel* catLabel = new QLabel(cat + ":", dlg);
+        catLabel->setStyleSheet("color: #e2e8f0; font-size: 13px;");
+        formLayout->addRow(catLabel, spin);
+    }
+
+    dlgLayout->addLayout(formLayout);
+
+    // ── Sekcja dodawania nowej kategorii ─────────────────────────────────────
+    QFrame* line2 = new QFrame(dlg);
+    line2->setFrameShape(QFrame::HLine);
+    line2->setStyleSheet("color: #334155;");
+    dlgLayout->addWidget(line2);
+
+    QLabel* addTitle = new QLabel("Dodaj nową kategorię:", dlg);
+    addTitle->setStyleSheet("color: #e2e8f0; font-weight: bold; font-size: 13px;");
+    dlgLayout->addWidget(addTitle);
+
+    QHBoxLayout* addRow = new QHBoxLayout();
+    QLineEdit* newCatEdit = new QLineEdit(dlg);
+    newCatEdit->setPlaceholderText("Nazwa kategorii...");
+    QDoubleSpinBox* newCatSpin = new QDoubleSpinBox(dlg);
+    newCatSpin->setRange(0.0, 1000000.0);
+    newCatSpin->setDecimals(2);
+    newCatSpin->setSuffix(" PLN");
+    newCatSpin->setSingleStep(50.0);
+    newCatSpin->setValue(500.0);
+
+    QPushButton* addCatBtn = new QPushButton("➕ Dodaj", dlg);
+    addCatBtn->setFixedHeight(36);
+    addCatBtn->setStyleSheet(R"(
+        QPushButton {
+            background-color: #0f7a4e;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            font-size: 12px;
+            font-weight: bold;
+            padding: 0 14px;
+        }
+        QPushButton:hover { background-color: #15a068; }
+    )");
+
+    addRow->addWidget(newCatEdit, 2);
+    addRow->addWidget(newCatSpin, 1);
+    addRow->addWidget(addCatBtn);
+    dlgLayout->addLayout(addRow);
+
+    // Dodaj kategorię do formularza
+    connect(addCatBtn, &QPushButton::clicked, dlg, [&spinBoxes, newCatEdit, newCatSpin, formLayout, dlg]() {
+        QString newCat = newCatEdit->text().trimmed();
+        if (newCat.isEmpty()) return;
+        if (spinBoxes.contains(newCat)) {
+            spinBoxes[newCat]->setValue(newCatSpin->value());
+            newCatEdit->clear();
+            return;
+        }
+        QDoubleSpinBox* spin = new QDoubleSpinBox(dlg);
+        spin->setRange(0.0, 1000000.0);
+        spin->setDecimals(2);
+        spin->setSuffix(" PLN");
+        spin->setSingleStep(50.0);
+        spin->setValue(newCatSpin->value());
+        spin->setStyleSheet(R"(
+            QDoubleSpinBox {
+                background-color: #1e293b;
+                color: #e2e8f0;
+                border: 1px solid #334155;
+                border-radius: 6px;
+                padding: 5px 10px;
+                font-size: 13px;
+            }
+            QDoubleSpinBox:focus { border: 1px solid #3d8bfd; }
+        )");
+        spinBoxes[newCat] = spin;
+        QLabel* catLabel = new QLabel(newCat + ":", dlg);
+        catLabel->setStyleSheet("color: #e2e8f0; font-size: 13px;");
+        formLayout->addRow(catLabel, spin);
+        newCatEdit->clear();
+    });
+
+    // ── Przyciski OK / Anuluj ─────────────────────────────────────────────────
+    QDialogButtonBox* btnBox = new QDialogButtonBox(
+        QDialogButtonBox::Ok | QDialogButtonBox::Cancel, dlg);
+    dlgLayout->addWidget(btnBox);
+
+    connect(btnBox, &QDialogButtonBox::accepted, dlg, [this, dlg, &spinBoxes]() {
+        // Zapisz wszystkie limity
+        for (auto it = spinBoxes.constBegin(); it != spinBoxes.constEnd(); ++it) {
+            wallet.setCategoryLimit(it.key().toStdString(), it.value()->value());
+        }
+        updateEnvelopeBudgets();
+        dlg->accept();
+    });
+    connect(btnBox, &QDialogButtonBox::rejected, dlg, &QDialog::reject);
+
+    dlg->exec();
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+//  Aktualizacja paska budżetu miesięcznego
 // ═══════════════════════════════════════════════════════════════════════════════
 void MainWindow::updateBudgetBar() {
     QDate today     = QDate::currentDate();
@@ -558,56 +787,41 @@ void MainWindow::updateBudgetBar() {
     if (percent >= 90) {
         budgetBar->setStyleSheet(R"(
             QProgressBar {
-                background-color: #1e293b;
-                border: 1px solid #7f1d1d;
-                border-radius: 6px;
-                text-align: center;
-                color: white;
-                font-size: 12px;
+                background-color: #1e293b; border: 1px solid #7f1d1d;
+                border-radius: 6px; text-align: center; color: white; font-size: 12px;
             }
             QProgressBar::chunk {
                 background: qlineargradient(x1:0, y1:0, x2:1, y2:0,
-                    stop:0 #b91c1c, stop:1 #ef4444);
-                border-radius: 6px;
+                    stop:0 #b91c1c, stop:1 #ef4444); border-radius: 6px;
             }
         )");
     } else if (percent >= 70) {
         budgetBar->setStyleSheet(R"(
             QProgressBar {
-                background-color: #1e293b;
-                border: 1px solid #78350f;
-                border-radius: 6px;
-                text-align: center;
-                color: white;
-                font-size: 12px;
+                background-color: #1e293b; border: 1px solid #78350f;
+                border-radius: 6px; text-align: center; color: white; font-size: 12px;
             }
             QProgressBar::chunk {
                 background: qlineargradient(x1:0, y1:0, x2:1, y2:0,
-                    stop:0 #b45309, stop:1 #f59e0b);
-                border-radius: 6px;
+                    stop:0 #b45309, stop:1 #f59e0b); border-radius: 6px;
             }
         )");
     } else {
         budgetBar->setStyleSheet(R"(
             QProgressBar {
-                background-color: #1e293b;
-                border: 1px solid #334155;
-                border-radius: 6px;
-                text-align: center;
-                color: white;
-                font-size: 12px;
+                background-color: #1e293b; border: 1px solid #334155;
+                border-radius: 6px; text-align: center; color: white; font-size: 12px;
             }
             QProgressBar::chunk {
                 background: qlineargradient(x1:0, y1:0, x2:1, y2:0,
-                    stop:0 #1a6fdb, stop:1 #0d6efd);
-                border-radius: 6px;
+                    stop:0 #1a6fdb, stop:1 #0d6efd); border-radius: 6px;
             }
         )");
     }
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
-//  Krok 3 — Wykres kołowy
+//  Wykres kołowy
 // ═══════════════════════════════════════════════════════════════════════════════
 void MainWindow::updateChart() {
     pieSeries->clear();
@@ -645,17 +859,15 @@ void MainWindow::updateChart() {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
-//  Krok 3 — Wykres słupkowy trendów (miesięczny)
+//  Wykres słupkowy trendów
 // ═══════════════════════════════════════════════════════════════════════════════
 void MainWindow::updateBarChart() {
     QChart* chart = barChartView->chart();
     chart->removeAllSeries();
-    // Usuń stare osie
     const auto oldAxes = chart->axes();
     for (auto* axis : oldAxes)
         chart->removeAxis(axis);
 
-    // Zbierz dane per miesiąc
     QMap<QString, double> monthlyIncome;
     QMap<QString, double> monthlyExpense;
 
@@ -671,7 +883,6 @@ void MainWindow::updateBarChart() {
         }
     }
 
-    // Unikalne miesiące (posortowane)
     QStringList months;
     for (const auto& k : monthlyIncome.keys())
         if (!months.contains(k)) months << k;
@@ -680,7 +891,6 @@ void MainWindow::updateBarChart() {
     std::sort(months.begin(), months.end());
 
     if (months.isEmpty()) {
-        // Placeholder
         QBarSet* placeholder = new QBarSet("Brak danych");
         placeholder->setColor(QColor("#334155"));
         *placeholder << 0;
@@ -694,14 +904,11 @@ void MainWindow::updateBarChart() {
     QBarSet* expenseSet = new QBarSet("Wydatki");
     incomeSet->setColor(QColor("#22c55e"));
     expenseSet->setColor(QColor("#ef4444"));
-    incomeSet->setLabelColor(QColor("#e2e8f0"));
-    expenseSet->setLabelColor(QColor("#e2e8f0"));
 
-    QStringList displayMonths; // sformatowane etykiety osi X
+    QStringList displayMonths;
     for (const QString& m : months) {
         incomeSet->append(monthlyIncome.value(m, 0.0));
         expenseSet->append(monthlyExpense.value(m, 0.0));
-        // Formatowanie: "2024-05" → "Maj 2024"
         QDate d = QDate::fromString(m + "-01", "yyyy-MM-dd");
         displayMonths << d.toString("MMM yy");
     }
@@ -731,20 +938,33 @@ void MainWindow::updateBarChart() {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
-//  Krok 5 — Budżetowanie kopertowe
+//  Budżetowanie kopertowe — dynamiczne, z categoryLimits z Wallet
 // ═══════════════════════════════════════════════════════════════════════════════
 void MainWindow::updateEnvelopeBudgets() {
-    // Wyczyść poprzednie widgety
+    // Wyczyść stare widgety
     while (QLayoutItem* item = envelopeLayout->takeAt(0)) {
         if (QWidget* w = item->widget()) w->deleteLater();
         delete item;
+    }
+
+    const auto& limits = wallet.getCategoryLimits();
+
+    if (limits.empty()) {
+        QLabel* emptyLabel = new QLabel(
+            "Brak ustawionych limitów kopertowych.\n"
+            "Kliknij '⚙ Zarządzaj limitami', aby dodać kategorie.");
+        emptyLabel->setStyleSheet("color: #475569; font-size: 13px; padding: 16px;");
+        emptyLabel->setAlignment(Qt::AlignCenter);
+        envelopeLayout->addWidget(emptyLabel);
+        envelopeLayout->addStretch();
+        return;
     }
 
     QDate today     = QDate::currentDate();
     int   thisYear  = today.year();
     int   thisMonth = today.month();
 
-    // Sumuj wydatki bieżącego miesiąca per kategoria
+    // Miesięczne wydatki per kategoria (case-insensitive matching)
     QMap<QString, double> spent;
     for (const auto& t : wallet.getTransactions()) {
         if (dynamic_cast<Expense*>(t.get())) {
@@ -752,10 +972,9 @@ void MainWindow::updateEnvelopeBudgets() {
                 QString::fromStdString(t->getDate()), "yyyy-MM-dd");
             if (txDate.year() == thisYear && txDate.month() == thisMonth) {
                 QString cat = QString::fromStdString(t->getCategory());
-                // Case-insensitive matching z limitami
-                for (auto it = ENVELOPE_LIMITS.constBegin(); it != ENVELOPE_LIMITS.constEnd(); ++it) {
-                    if (cat.compare(it.key(), Qt::CaseInsensitive) == 0) {
-                        spent[it.key()] += t->getAmount();
+                for (const auto& kv : limits) {
+                    if (cat.compare(QString::fromStdString(kv.first), Qt::CaseInsensitive) == 0) {
+                        spent[QString::fromStdString(kv.first)] += t->getAmount();
                         break;
                     }
                 }
@@ -763,36 +982,37 @@ void MainWindow::updateEnvelopeBudgets() {
         }
     }
 
-    static const QMap<QString, QString> categoryIcons = {
-        {"Jedzenie",  "🍕"},
-        {"Rata",      "🏠"},
-        {"Transport", "🚗"},
-        {"Rozrywka",  "🎮"},
+    // Domyślne ikony dla znanych kategorii
+    static const QMap<QString, QString> icons = {
+        {"Jedzenie",  "🍕"}, {"Rata",      "🏠"}, {"Transport", "🚗"},
+        {"Rozrywka",  "🎮"}, {"Zakupy",    "🛍"}, {"Zdrowie",   "💊"},
+        {"Edukacja",  "📚"}, {"Podróże",   "✈"}, {"Sport",     "⚽"},
     };
 
+    // Rysuj karty w siatce (max 4 per wiersz)
     QGridLayout* grid = new QGridLayout();
-    grid->setSpacing(8);
-    int col = 0;
+    grid->setSpacing(10);
+    int col = 0, row = 0;
+    const int MAX_COLS = 4;
 
-    for (auto it = ENVELOPE_LIMITS.constBegin(); it != ENVELOPE_LIMITS.constEnd(); ++it) {
-        const QString& cat    = it.key();
-        double         limit  = it.value();
-        double         spentV = spent.value(cat, 0.0);
-        int            pct    = static_cast<int>(std::min(spentV / limit * 100.0, 100.0));
+    for (const auto& kv : limits) {
+        const QString cat   = QString::fromStdString(kv.first);
+        double        limit = kv.second;
+        double        spentV = spent.value(cat, 0.0);
+        int           pct   = static_cast<int>(std::min(spentV / limit * 100.0, 100.0));
 
         QWidget*     card       = new QWidget();
         QVBoxLayout* cardLayout = new QVBoxLayout(card);
-        cardLayout->setContentsMargins(12, 10, 12, 10);
-        cardLayout->setSpacing(4);
+        cardLayout->setContentsMargins(14, 12, 14, 12);
+        cardLayout->setSpacing(5);
         card->setStyleSheet(R"(
             background: #1e293b;
             border: 1px solid #334155;
-            border-radius: 8px;
+            border-radius: 10px;
         )");
 
-        QString icon = categoryIcons.value(cat, "📂");
-        QLabel* nameLabel = new QLabel(
-            QString("%1  %2").arg(icon).arg(cat));
+        QString icon = icons.value(cat, "📂");
+        QLabel* nameLabel = new QLabel(QString("%1  %2").arg(icon).arg(cat));
         nameLabel->setStyleSheet("color: #e2e8f0; font-weight: bold; font-size: 13px;");
 
         QLabel* amtLabel = new QLabel(
@@ -818,24 +1038,152 @@ void MainWindow::updateEnvelopeBudgets() {
             }
         )").arg(barColor));
 
+        QLabel* pctLabel = new QLabel(QString("%1%").arg(pct));
+        pctLabel->setStyleSheet(QString("color: %1; font-size: 11px; font-weight: bold;")
+                                    .arg(barColor));
+        pctLabel->setAlignment(Qt::AlignRight);
+
         cardLayout->addWidget(nameLabel);
         cardLayout->addWidget(amtLabel);
         cardLayout->addWidget(bar);
+        cardLayout->addWidget(pctLabel);
 
-        grid->addWidget(card, 0, col++);
+        grid->addWidget(card, row, col++);
+        if (col >= MAX_COLS) { col = 0; ++row; }
     }
 
     QWidget* gridWrapper = new QWidget();
     gridWrapper->setLayout(grid);
     gridWrapper->setStyleSheet("background: transparent;");
     envelopeLayout->addWidget(gridWrapper);
+    envelopeLayout->addStretch();
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
-//  Krok 4 — Zakładka celów oszczędnościowych
+//  Zakładka 4 — Subkonta (Konta)
+// ═══════════════════════════════════════════════════════════════════════════════
+void MainWindow::refreshAccountsTab() {
+    // Wyczyść stare widgety
+    while (QLayoutItem* item = accountsLayout->takeAt(0)) {
+        if (QWidget* w = item->widget()) w->deleteLater();
+        delete item;
+    }
+
+    const auto balances = wallet.getAccountBalances();
+
+    if (balances.empty()) {
+        QLabel* emptyLabel = new QLabel(
+            "Brak transakcji.\nDodaj transakcję, aby zobaczyć stan subkont.");
+        emptyLabel->setStyleSheet("color: #475569; font-size: 14px; padding: 20px;");
+        emptyLabel->setAlignment(Qt::AlignCenter);
+        accountsLayout->addWidget(emptyLabel);
+        accountsLayout->addStretch();
+        return;
+    }
+
+    // Ikony dla znanych kont
+    static const QMap<QString, QString> accountIcons = {
+        {"Gotówka",          "💵"},
+        {"Konto bankowe",    "🏦"},
+        {"Karta kredytowa",  "💳"},
+        {"Oszczędności",     "🐷"},
+    };
+
+    // Oblicz łączne saldo (do wykreślenia udziałów)
+    double totalPositive = 0.0;
+    for (const auto& kv : balances)
+        if (kv.second > 0.0) totalPositive += kv.second;
+
+    QGridLayout* grid = new QGridLayout();
+    grid->setSpacing(12);
+    int col = 0, row = 0;
+    const int MAX_COLS = 3;
+
+    for (const auto& kv : balances) {
+        const QString accName = QString::fromStdString(kv.first);
+        double        balance  = kv.second;
+
+        QWidget*     card       = new QWidget();
+        QVBoxLayout* cardLayout = new QVBoxLayout(card);
+        cardLayout->setContentsMargins(18, 16, 18, 16);
+        cardLayout->setSpacing(6);
+
+        // Kolor karty zależy od salda
+        QString cardBorder = (balance >= 0) ? "#1a4f9f" : "#7f1d1d";
+        card->setStyleSheet(QString(R"(
+            background: #1e293b;
+            border: 1px solid %1;
+            border-radius: 12px;
+        )").arg(cardBorder));
+
+        // Nagłówek: ikona + nazwa konta
+        QString icon = accountIcons.value(accName, "🏧");
+        QLabel* titleLabel = new QLabel(QString("%1  %2").arg(icon).arg(accName));
+        titleLabel->setStyleSheet("color: #e2e8f0; font-size: 14px; font-weight: bold;");
+
+        // Kwota
+        QString balStr = QString("%1 PLN").arg(balance, 0, 'f', 2);
+        QLabel* balLabel = new QLabel(balStr);
+        QFont balFont = balLabel->font();
+        balFont.setPointSize(18);
+        balFont.setBold(true);
+        balLabel->setFont(balFont);
+        balLabel->setStyleSheet(balance >= 0
+            ? "color: #22c55e;"
+            : "color: #ef4444;");
+
+        // Mini pasek udziału (jeśli saldo dodatnie)
+        if (balance > 0.0 && totalPositive > 0.0) {
+            int share = static_cast<int>(balance / totalPositive * 100.0);
+            QLabel* shareLabel = new QLabel(
+                QString("Udział w łącznym saldo: %1%").arg(share));
+            shareLabel->setStyleSheet("color: #64748b; font-size: 11px;");
+
+            QProgressBar* shareBar = new QProgressBar();
+            shareBar->setRange(0, 100);
+            shareBar->setValue(share);
+            shareBar->setFixedHeight(8);
+            shareBar->setTextVisible(false);
+            shareBar->setStyleSheet(R"(
+                QProgressBar {
+                    background-color: #0f172a; border: none; border-radius: 3px;
+                }
+                QProgressBar::chunk {
+                    background: qlineargradient(x1:0, y1:0, x2:1, y2:0,
+                        stop:0 #1a6fdb, stop:1 #38bdf8);
+                    border-radius: 3px;
+                }
+            )");
+
+            cardLayout->addWidget(titleLabel);
+            cardLayout->addWidget(balLabel);
+            cardLayout->addWidget(shareLabel);
+            cardLayout->addWidget(shareBar);
+        } else {
+            cardLayout->addWidget(titleLabel);
+            cardLayout->addWidget(balLabel);
+            if (balance < 0.0) {
+                QLabel* warnLabel = new QLabel("⚠  Ujemne saldo konta");
+                warnLabel->setStyleSheet("color: #ef4444; font-size: 11px;");
+                cardLayout->addWidget(warnLabel);
+            }
+        }
+
+        grid->addWidget(card, row, col++);
+        if (col >= MAX_COLS) { col = 0; ++row; }
+    }
+
+    QWidget* gridWrapper = new QWidget();
+    gridWrapper->setLayout(grid);
+    gridWrapper->setStyleSheet("background: transparent;");
+    accountsLayout->addWidget(gridWrapper);
+    accountsLayout->addStretch();
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+//  Zakładka celów
 // ═══════════════════════════════════════════════════════════════════════════════
 void MainWindow::refreshGoalsTab() {
-    // Wyczyść stare widgety (oprócz stretch)
     while (QLayoutItem* item = goalsLayout->takeAt(0)) {
         if (QWidget* w = item->widget()) w->deleteLater();
         delete item;
@@ -844,7 +1192,8 @@ void MainWindow::refreshGoalsTab() {
     const auto& goals = wallet.getGoals();
 
     if (goals.empty()) {
-        QLabel* emptyLabel = new QLabel("Brak celów oszczędnościowych.\nKliknij '🎯 Nowy cel', aby dodać pierwszy.");
+        QLabel* emptyLabel = new QLabel(
+            "Brak celów oszczędnościowych.\nKliknij '🎯 Nowy cel', aby dodać pierwszy.");
         emptyLabel->setStyleSheet("color: #475569; font-size: 14px; padding: 20px;");
         emptyLabel->setAlignment(Qt::AlignCenter);
         goalsLayout->addWidget(emptyLabel);
@@ -869,12 +1218,10 @@ void MainWindow::refreshGoalsTab() {
             border-radius: 10px;
         )");
 
-        // Nagłówek karty
         QHBoxLayout* headerRow = new QHBoxLayout();
         QLabel* nameLabel = new QLabel(
             QString("🎯  %1").arg(QString::fromStdString(g.name)));
-        nameLabel->setStyleSheet(
-            "color: #e2e8f0; font-size: 14px; font-weight: bold;");
+        nameLabel->setStyleSheet("color: #e2e8f0; font-size: 14px; font-weight: bold;");
 
         QLabel* pctLabel = new QLabel(QString("%1%").arg(pct));
         pctLabel->setStyleSheet(
@@ -886,7 +1233,6 @@ void MainWindow::refreshGoalsTab() {
         headerRow->addWidget(pctLabel);
         cardLayout->addLayout(headerRow);
 
-        // Kwota
         QLabel* amtLabel = new QLabel(
             QString("%1 / %2 PLN zebrano")
                 .arg(g.currentAmount, 0, 'f', 2)
@@ -894,7 +1240,6 @@ void MainWindow::refreshGoalsTab() {
         amtLabel->setStyleSheet("color: #64748b; font-size: 12px;");
         cardLayout->addWidget(amtLabel);
 
-        // Pasek postępu
         QProgressBar* bar = new QProgressBar();
         bar->setRange(0, 100);
         bar->setValue(pct);
@@ -904,9 +1249,7 @@ void MainWindow::refreshGoalsTab() {
         QString barColor = (pct >= 100) ? "#22c55e" : "#0d6efd";
         bar->setStyleSheet(QString(R"(
             QProgressBar {
-                background-color: #0f172a;
-                border: none;
-                border-radius: 6px;
+                background-color: #0f172a; border: none; border-radius: 6px;
             }
             QProgressBar::chunk {
                 background: qlineargradient(x1:0, y1:0, x2:1, y2:0,
@@ -959,12 +1302,11 @@ void MainWindow::applySearch(const QString& text) {
         }
     }
 
-    if (query.isEmpty()) {
+    if (query.isEmpty())
         updateBalanceDisplay();
-    } else {
+    else
         balanceLabel->setText(
             QString("Saldo (wyniki: %1 PLN)").arg(visibleBalance, 0, 'f', 2));
-    }
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -1011,8 +1353,8 @@ void MainWindow::checkRecurringTransactions() {
     QDate today = QDate::currentDate();
     QStringList notifications;
 
-    const auto& txList     = wallet.getTransactions();
-    size_t      origCount  = txList.size();
+    const auto& txList    = wallet.getTransactions();
+    size_t      origCount = txList.size();
 
     for (size_t i = 0; i < origCount; ++i) {
         const auto& t = txList[i];
@@ -1024,10 +1366,10 @@ void MainWindow::checkRecurringTransactions() {
         if (txDate.year() < today.year() ||
             (txDate.year() == today.year() && txDate.month() < today.month()))
         {
-            QString cat     = QString::fromStdString(t->getCategory());
-            double  amount  = t->getAmount();
-            std::string acc = t->getAccountName();
-            QString todayStr = today.toString("yyyy-MM-dd");
+            QString     cat      = QString::fromStdString(t->getCategory());
+            double      amount   = t->getAmount();
+            std::string acc      = t->getAccountName();
+            QString     todayStr = today.toString("yyyy-MM-dd");
 
             if (dynamic_cast<Income*>(t.get())) {
                 wallet.addTransaction(
@@ -1058,8 +1400,7 @@ void MainWindow::checkRecurringTransactions() {
 // ═══════════════════════════════════════════════════════════════════════════════
 void MainWindow::updateBalanceDisplay() {
     double balance = wallet.calculateBalance();
-    balanceLabel->setText(
-        QString("Saldo: %1 PLN").arg(balance, 0, 'f', 2));
+    balanceLabel->setText(QString("Saldo: %1 PLN").arg(balance, 0, 'f', 2));
     balanceLabel->setStyleSheet(
         balance >= 0
             ? "color: #38bdf8; padding: 4px 2px; font-weight: bold;"
@@ -1077,25 +1418,22 @@ void MainWindow::refreshTable() {
         const auto& t = transactions[i];
         historyTable->insertRow(i);
 
-        // Kol 0: Data
         historyTable->setItem(i, 0,
             new QTableWidgetItem(QString::fromStdString(t->getDate())));
-        // Kol 1: Kategoria
         historyTable->setItem(i, 1,
             new QTableWidgetItem(QString::fromStdString(t->getCategory())));
-        // Kol 2: Typ
+
         bool    isIncome = (dynamic_cast<Income*>(t.get()) != nullptr);
         QString typeStr  = isIncome ? "Przychód" : "Wydatek";
         auto*   typeItem = new QTableWidgetItem(typeStr);
         typeItem->setForeground(isIncome ? QColor("#22c55e") : QColor("#ef4444"));
         historyTable->setItem(i, 2, typeItem);
-        // Kol 3: Kwota
+
         historyTable->setItem(i, 3,
             new QTableWidgetItem(QString::number(t->getAmount(), 'f', 2)));
-        // Kol 4: Konto
         historyTable->setItem(i, 4,
             new QTableWidgetItem(QString::fromStdString(t->getAccountName())));
-        // Kol 5: Cykliczna
+
         QString recStr  = t->isRecurring() ? "♻  Tak" : "—";
         auto*   recItem = new QTableWidgetItem(recStr);
         recItem->setForeground(t->isRecurring() ? QColor("#a3e635") : QColor("#475569"));

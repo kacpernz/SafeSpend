@@ -49,16 +49,25 @@ private:
     QWidget*       goalsContainer;
     QVBoxLayout*   goalsLayout;
 
+    // ── Zakładka 4: Konta (subkonta) ─────────────────────────────────────────
+    QWidget*       accountsWidget;
+    QVBoxLayout*   accountsLayout;
+
     // ── Metody wewnętrzne ─────────────────────────────────────────────────────
     void updateChart();
     void updateBarChart();
     void updateBudgetBar();
     void updateEnvelopeBudgets();
+    void refreshAccountsTab();
+    void openLimitsDialog();
     void applySearch(const QString& text);
     void exportToCSV();
     void checkRecurringTransactions();
     void refreshGoalsTab();
     QPushButton* makeButton(const QString& text, const QString& color);
+
+    // Pomocnik: odświeża wszystko po zmianie danych
+    void refreshAll();
 
 public:
     MainWindow(QWidget* parent = nullptr);

@@ -27,6 +27,22 @@ const std::vector<std::unique_ptr<ITransaction>>& Wallet::getTransactions() cons
 void Wallet::clear() {
     transactions.clear();
     goals.clear();
+    categoryLimits.clear();
+}
+
+// ── Subkonta ──────────────────────────────────────────────────────────────────
+
+std::map<std::string, double> Wallet::getAccountBalances() const {
+    std::map<std::string, double> balances;
+    for (const auto& t : transactions) {
+        const std::string& acc = t->getAccountName();
+        if (dynamic_cast<Income*>(t.get())) {
+            balances[acc] += t->getAmount();
+        } else if (dynamic_cast<Expense*>(t.get())) {
+            balances[acc] -= t->getAmount();
+        }
+    }
+    return balances;
 }
 
 // ── Cele oszczędnościowe ──────────────────────────────────────────────────────
@@ -38,10 +54,6 @@ void Wallet::addGoal(const Goal& goal) {
 bool Wallet::fundGoal(size_t index, double amount) {
     if (index >= goals.size()) return false;
     if (calculateBalance() < amount) return false;
-
-    // Odejmij z salda poprzez dodanie wydatku "Cel: <nazwa>"
-    // (logika odejmowania jest w addTransaction — tu zwracamy tylko sukces,
-    //  MainWindow sam doda transakcję Expense i wywoła addGoal z nową kwotą)
     goals[index].currentAmount += amount;
     return true;
 }
@@ -52,4 +64,21 @@ const std::vector<Goal>& Wallet::getGoals() const {
 
 std::vector<Goal>& Wallet::getGoalsMutable() {
     return goals;
+}
+
+// ── Limity kopertowe ──────────────────────────────────────────────────────────
+
+void Wallet::setCategoryLimit(const std::string& category, double limit) {
+    if (limit <= 0.0)
+        categoryLimits.erase(category);
+    else
+        categoryLimits[category] = limit;
+}
+
+void Wallet::removeCategoryLimit(const std::string& category) {
+    categoryLimits.erase(category);
+}
+
+const std::map<std::string, double>& Wallet::getCategoryLimits() const {
+    return categoryLimits;
 }
