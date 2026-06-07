@@ -40,10 +40,8 @@
 #include <QtCharts/QPieSlice>
 #include <QtCharts/QValueAxis>
 
-// ═══════════════════════════════════════════════════════════════════════════════
-//  Stałe
-// ═══════════════════════════════════════════════════════════════════════════════
-static constexpr double MONTHLY_BUDGET_LIMIT = 5000.0;
+// (stała MONTHLY_BUDGET_LIMIT usunięta — wartość przechowywana w wallet.getMonthlyBudgetLimit())
+
 
 // ═══════════════════════════════════════════════════════════════════════════════
 //  Pomocnicze
@@ -201,18 +199,18 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent) {
   layout1->addWidget(historyTable);
 
   // ── Pasek budżetu miesięcznego ────────────────────────────────────────────
-  QLabel *budgetLabel = new QLabel(QString("Budżet miesięczny (limit: %1 PLN):")
-                                       .arg(MONTHLY_BUDGET_LIMIT, 0, 'f', 0),
-                                   this);
+  // Etykieta ogólna; aktualny limit jest widoczny dynamicznie w formacie paska
+  QLabel *budgetLabel = new QLabel("Budżet miesięczny:", this);
   budgetLabel->setStyleSheet("color: #94a3b8; font-size: 12px;");
   layout1->addWidget(budgetLabel);
+
 
   budgetBar = new QProgressBar(this);
   budgetBar->setRange(0, 100);
   budgetBar->setValue(0);
   budgetBar->setFixedHeight(22);
   budgetBar->setTextVisible(true);
-  budgetBar->setFormat("0 / 5000 PLN  (0%)");
+  budgetBar->setFormat("0 / 5000 PLN  (0%)");  // zostanie nadpisane przez updateBudgetBar()
   budgetBar->setStyleSheet(R"(
         QProgressBar {
             background-color: #1e293b;
@@ -650,34 +648,45 @@ void MainWindow::openLimitsDialog() {
   dlg->setWindowTitle("Zarządzaj limitami kategorii");
   dlg->setMinimumWidth(440);
   dlg->setAttribute(Qt::WA_DeleteOnClose);
-  dlg->setStyleSheet(R"(
+  // Styl dialogu zgodny z aktualnym motywem (ciemny / jasny)
+  bool isDarkTheme = ThemeManager::instance()->isDark();
+  QString dlgBg         = isDarkTheme ? "#111827" : "#f8fafc";
+  QString dlgInput      = isDarkTheme ? "#1e293b" : "#ffffff";
+  QString dlgInputBorder= isDarkTheme ? "#334155" : "#cbd5e1";
+  QString dlgTextMain   = isDarkTheme ? "#e2e8f0" : "#1e293b";
+  QString dlgTextMuted  = isDarkTheme ? "#94a3b8" : "#475569";
+  QString dlgAccent     = isDarkTheme ? "#3d8bfd" : "#2563eb";
+  QString dlgCancelBg   = isDarkTheme ? "#334155" : "#e2e8f0";
+  QString dlgCancelHov  = isDarkTheme ? "#475569" : "#cbd5e1";
+
+  dlg->setStyleSheet(QString(R"(
         QDialog {
-            background-color: #111827;
+            background-color: %1;
         }
         QLabel {
-            color: #94a3b8;
+            color: %2;
             font-size: 13px;
         }
         QDoubleSpinBox {
-            background-color: #1e293b;
-            color: #e2e8f0;
-            border: 1px solid #334155;
+            background-color: %3;
+            color: %4;
+            border: 1px solid %5;
             border-radius: 6px;
             padding: 5px 10px;
             font-size: 13px;
         }
-        QDoubleSpinBox:focus { border: 1px solid #3d8bfd; }
+        QDoubleSpinBox:focus { border: 1px solid %6; }
         QLineEdit {
-            background-color: #1e293b;
-            color: #e2e8f0;
-            border: 1px solid #334155;
+            background-color: %3;
+            color: %4;
+            border: 1px solid %5;
             border-radius: 6px;
             padding: 5px 10px;
             font-size: 13px;
         }
-        QLineEdit:focus { border: 1px solid #3d8bfd; }
+        QLineEdit:focus { border: 1px solid %6; }
         QDialogButtonBox QPushButton {
-            background-color: #0d6efd;
+            background-color: %6;
             color: white;
             border: none;
             border-radius: 6px;
@@ -685,14 +694,25 @@ void MainWindow::openLimitsDialog() {
             font-size: 13px;
             font-weight: bold;
         }
-        QDialogButtonBox QPushButton:hover { background-color: #3d8bfd; }
+        QDialogButtonBox QPushButton:hover { opacity: 0.85; }
         QDialogButtonBox QPushButton[text="Cancel"] {
-            background-color: #334155;
+            background-color: %7;
+            color: %2;
         }
         QDialogButtonBox QPushButton[text="Cancel"]:hover {
-            background-color: #475569;
+            background-color: %8;
         }
-    )");
+    )")
+    .arg(dlgBg)         // %1
+    .arg(dlgTextMain)   // %2
+    .arg(dlgInput)      // %3
+    .arg(dlgTextMain)   // %4
+    .arg(dlgInputBorder)// %5
+    .arg(dlgAccent)     // %6
+    .arg(dlgCancelBg)   // %7
+    .arg(dlgCancelHov)  // %8
+  );
+
 
   QVBoxLayout *dlgLayout = new QVBoxLayout(dlg);
   dlgLayout->setContentsMargins(20, 20, 20, 16);
@@ -706,16 +726,52 @@ void MainWindow::openLimitsDialog() {
   infoLabel->setStyleSheet("color: #64748b; font-size: 12px;");
   dlgLayout->addWidget(infoLabel);
 
-  // ── Sekcja istniejących limitów ───────────────────────────────────────────
+  // ── Sekcja: Główny budżet miesięczny ───────────────────────────────────────
+  QFrame *budgetSectionLine = new QFrame(dlg);
+  budgetSectionLine->setFrameShape(QFrame::HLine);
+  budgetSectionLine->setStyleSheet("color: #334155;");
+  dlgLayout->addWidget(budgetSectionLine);
+
+  QLabel *budgetSectionTitle = new QLabel("💰  Główny budżet miesięczny:", dlg);
+  budgetSectionTitle->setStyleSheet(
+      "color: #38bdf8; font-weight: bold; font-size: 14px; padding: 2px 0;");
+  dlgLayout->addWidget(budgetSectionTitle);
+
+  QLabel *budgetSectionHint = new QLabel(
+      "Całkowity limit wydatków w bieżącym miesiącu (widoczny na pasku budżetu).",
+      dlg);
+  budgetSectionHint->setWordWrap(true);
+  budgetSectionHint->setStyleSheet("color: #64748b; font-size: 11px; margin-bottom: 2px;");
+  dlgLayout->addWidget(budgetSectionHint);
+
+  QFormLayout *budgetForm = new QFormLayout();
+  budgetForm->setSpacing(6);
+  budgetForm->setLabelAlignment(Qt::AlignLeft | Qt::AlignVCenter);
+
+  QDoubleSpinBox *globalBudgetSpin = new QDoubleSpinBox(dlg);
+  globalBudgetSpin->setRange(1.0, 10000000.0);
+  globalBudgetSpin->setDecimals(2);
+  globalBudgetSpin->setSuffix(" PLN");
+  globalBudgetSpin->setSingleStep(100.0);
+  globalBudgetSpin->setValue(wallet.getMonthlyBudgetLimit());
+  globalBudgetSpin->setObjectName("globalBudgetSpin");
+
+  QLabel *globalBudgetLabel = new QLabel("Limit globalny:", dlg);
+  globalBudgetLabel->setStyleSheet("color: #e2e8f0; font-size: 13px; font-weight: bold;");
+  budgetForm->addRow(globalBudgetLabel, globalBudgetSpin);
+  dlgLayout->addLayout(budgetForm);
+
+  // ── Sekcja istniejących limitów kategorii ─────────────────────────────────
   QFrame *line1 = new QFrame(dlg);
   line1->setFrameShape(QFrame::HLine);
   line1->setStyleSheet("color: #334155;");
   dlgLayout->addWidget(line1);
 
-  QLabel *existingTitle = new QLabel("Istniejące limity:", dlg);
+  QLabel *existingTitle = new QLabel("Limity kategorii:", dlg);
   existingTitle->setStyleSheet(
       "color: #e2e8f0; font-weight: bold; font-size: 13px;");
   dlgLayout->addWidget(existingTitle);
+
 
   // Zbierz aktualne limity + spinboxy do mapy
   const auto &currentLimits = wallet.getCategoryLimits();
@@ -844,12 +900,15 @@ void MainWindow::openLimitsDialog() {
       QDialogButtonBox::Ok | QDialogButtonBox::Cancel, dlg);
   dlgLayout->addWidget(btnBox);
 
-  connect(btnBox, &QDialogButtonBox::accepted, dlg, [this, dlg, &spinBoxes]() {
-    // Zapisz wszystkie limity
+  connect(btnBox, &QDialogButtonBox::accepted, dlg, [this, dlg, &spinBoxes, globalBudgetSpin]() {
+    // Zapisz globalny limit budżetu
+    wallet.setMonthlyBudgetLimit(globalBudgetSpin->value());
+
+    // Zapisz limity kategorii
     for (auto it = spinBoxes.constBegin(); it != spinBoxes.constEnd(); ++it) {
       wallet.setCategoryLimit(it.key().toStdString(), it.value()->value());
     }
-    updateEnvelopeBudgets();
+    refreshAll();
     dlg->accept();
   });
   connect(btnBox, &QDialogButtonBox::rejected, dlg, &QDialog::reject);
@@ -875,13 +934,14 @@ void MainWindow::updateBudgetBar() {
     }
   }
 
-  double ratio = monthlyExpenses / MONTHLY_BUDGET_LIMIT;
+  double budgetLimit = wallet.getMonthlyBudgetLimit();
+  double ratio = monthlyExpenses / budgetLimit;
   int percent = static_cast<int>(std::min(ratio * 100.0, 100.0));
 
   budgetBar->setValue(percent);
   budgetBar->setFormat(QString("%1 / %2 PLN  (%3%)")
                            .arg(monthlyExpenses, 0, 'f', 0)
-                           .arg(MONTHLY_BUDGET_LIMIT, 0, 'f', 0)
+                           .arg(budgetLimit, 0, 'f', 0)
                            .arg(percent));
 
   if (percent >= 90) {

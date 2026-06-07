@@ -82,3 +82,14 @@ void Wallet::removeCategoryLimit(const std::string& category) {
 const std::map<std::string, double>& Wallet::getCategoryLimits() const {
     return categoryLimits;
 }
+
+// ── Globalny limit budżetu miesięcznego ──────────────────────────────────────
+
+void Wallet::setMonthlyBudgetLimit(double limit) {
+    if (limit > 0.0)
+        monthlyBudgetLimit = limit;
+}
+
+double Wallet::getMonthlyBudgetLimit() const {
+    return monthlyBudgetLimit;
+}

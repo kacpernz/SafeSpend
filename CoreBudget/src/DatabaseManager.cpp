@@ -8,7 +8,7 @@
 #include <cstring>
 
 // ═══════════════════════════════════════════════════════════════════════════════
-//  Format pliku binarnego (v3):
+//  Format pliku binarnego (v4):
 //
 //  [SEKCJA TRANSAKCJI]
 //    Liczba transakcji : size_t
@@ -27,11 +27,14 @@
 //      targetAmount    : double
 //      currentAmount   : double
 //
-//  [SEKCJA LIMITÓW KATEGORII]  ← NOWE (v3)
+//  [SEKCJA LIMITÓW KATEGORII]  ← v3
 //    Liczba limitów    : size_t
 //    Dla każdego limitu:
 //      categoryName    : size_t (długość) + chars
 //      limitValue      : double
+//
+//  [GLOBALNY LIMIT BUDŻETU]    ← NOWE (v4)
+//    monthlyBudgetLimit : double
 // ═══════════════════════════════════════════════════════════════════════════════
 
 void DatabaseManager::saveWallet(const Wallet& wallet,
@@ -94,7 +97,7 @@ void DatabaseManager::saveWallet(const Wallet& wallet,
         appendDouble(g.currentAmount);
     }
 
-    // ── SEKCJA LIMITÓW KATEGORII ──────────────────────────────────────────────
+    // ── SEKCJA LIMITÓW KATEGORII ────────────────────────────────────────────────────
     const auto& limits = wallet.getCategoryLimits();
     appendSizeT(limits.size());
 
@@ -103,7 +106,10 @@ void DatabaseManager::saveWallet(const Wallet& wallet,
         appendDouble(kv.second);
     }
 
-    // ── Szyfrowanie i zapis ──────────────────────────────────────────────────
+    // ── GLOBALNY LIMIT BUDŻETU (v4) ──────────────────────────────────────────────
+    appendDouble(wallet.getMonthlyBudgetLimit());
+
+    // ── Szyfrowanie i zapis ────────────────────────────────────────────────
     EncryptionService encryptor(password);
     encryptor.encryptDecrypt(buffer.data(), buffer.size());
 
@@ -213,7 +219,7 @@ void DatabaseManager::loadWallet(Wallet& wallet,
         }
     }
 
-    // ── SEKCJA LIMITÓW KATEGORII ──────────────────────────────────────────────
+    // ── SEKCJA LIMITÓW KATEGORII ────────────────────────────────────────────────────
     if (index < static_cast<size_t>(size)) {
         size_t limitCount = readSizeT();
         for (size_t i = 0; i < limitCount; ++i) {
@@ -223,6 +229,16 @@ void DatabaseManager::loadWallet(Wallet& wallet,
                 wallet.setCategoryLimit(catName, lim);
         }
     }
+
+    // ── GLOBALNY LIMIT BUDŻETU (v4) ──────────────────────────────────────────────
+    // Kompatybilność wsteczna: jeśli plik v3 nie zawiera tego pola,
+    // używamy wartości domyślnej 5000.0 i nie rzucamy wyjątku.
+    if (index + sizeof(double) <= static_cast<size_t>(size)) {
+        double budgetLimit = readDouble();
+        if (budgetLimit > 0.0)
+            wallet.setMonthlyBudgetLimit(budgetLimit);
+    }
+    // else: monthlyBudgetLimit pozostaje domyślne 5000.0 (v3 backward compat)
 
     file.close();
 }

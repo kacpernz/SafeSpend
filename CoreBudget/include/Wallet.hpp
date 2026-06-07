@@ -17,6 +17,7 @@ private:
     std::vector<std::unique_ptr<ITransaction>> transactions;
     std::vector<Goal>                          goals;
     std::map<std::string, double>              categoryLimits;
+    double                                     monthlyBudgetLimit = 5000.0;
 
 public:
     // ── Transakcje ───────────────────────────────────────────────────────────
@@ -39,4 +40,8 @@ public:
     void setCategoryLimit(const std::string& category, double limit);
     void removeCategoryLimit(const std::string& category);
     const std::map<std::string, double>& getCategoryLimits() const;
+
+    // ── Globalny limit budżetu miesięcznego ──────────────────────────────────
+    void   setMonthlyBudgetLimit(double limit);
+    double getMonthlyBudgetLimit() const;
 };
