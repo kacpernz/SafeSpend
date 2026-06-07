@@ -9,6 +9,7 @@
 #include <QScrollArea>
 #include <QVBoxLayout>
 #include <QVector>
+#include <QShortcut>
 #include <QtCharts/QChartView>
 #include <QtCharts/QChart>
 #include <QtCharts/QPieSeries>
@@ -16,6 +17,7 @@
 #include <QtCharts/QBarSet>
 #include <vector>
 #include <memory>
+#include <string>
 #include "Wallet.hpp"
 #include "ITransaction.hpp"
 
@@ -24,7 +26,8 @@ class MainWindow : public QMainWindow {
 
 private:
     // ── Dane ─────────────────────────────────────────────────────────────────
-    Wallet wallet;
+    Wallet      wallet;
+    std::string m_savePassword;   // hasło do auto-zapisu (ustawiane przy logowaniu)
 
     // ── Zakładki ──────────────────────────────────────────────────────────────
     QTabWidget*    tabWidget;
@@ -35,11 +38,10 @@ private:
     QTableWidget*  historyTable;
     QProgressBar*  budgetBar;
     QPushButton*   addTransactionButton;
-    QPushButton*   saveButton;
     QPushButton*   exportCsvButton;
 
     // ── Zakładka 2: Analiza ──────────────────────────────────────────────────
-    QChart*        pieChart;       // przechowujemy wskaźnik do ustawienia motywu
+    QChart*        pieChart;
     QChart*        barChart;
     QChartView*    chartView;
     QPieSeries*    pieSeries;
@@ -72,13 +74,14 @@ private:
     void refreshGoalsTab();
     QPushButton* makeButton(const QString& text, const QString& color);
     void refreshAll();
+    void autoSave();              // Cel 1: cichy zapis w tle
 
 private slots:
-    void onThemeChanged(bool isDark);   // Cel 4: aktualizuje QChart theme
+    void onThemeChanged(bool isDark);
 
 public:
     MainWindow(QWidget* parent = nullptr);
-    void loadWalletData(Wallet&& loadedWallet);
+    void loadWalletData(Wallet&& loadedWallet, const std::string& password);
     void updateBalanceDisplay();
     void refreshTable();
 };

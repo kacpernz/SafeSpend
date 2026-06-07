@@ -1,6 +1,8 @@
 #include "Wallet.hpp"
 #include "Income.hpp"
 #include "Expense.hpp"
+#include "Transfer.hpp"
+
 
 // ── Transakcje ────────────────────────────────────────────────────────────────
 
@@ -35,11 +37,14 @@ void Wallet::clear() {
 std::map<std::string, double> Wallet::getAccountBalances() const {
     std::map<std::string, double> balances;
     for (const auto& t : transactions) {
-        const std::string& acc = t->getAccountName();
         if (dynamic_cast<Income*>(t.get())) {
-            balances[acc] += t->getAmount();
+            balances[t->getAccountName()] += t->getAmount();
         } else if (dynamic_cast<Expense*>(t.get())) {
-            balances[acc] -= t->getAmount();
+            balances[t->getAccountName()] -= t->getAmount();
+        } else if (auto* tr = dynamic_cast<Transfer*>(t.get())) {
+            // Transfer: odejmuje z konta źródłowego, dodaje do docelowego
+            balances[tr->getFromAccount()] -= tr->getAmount();
+            balances[tr->getToAccount()]   += tr->getAmount();
         }
     }
     return balances;

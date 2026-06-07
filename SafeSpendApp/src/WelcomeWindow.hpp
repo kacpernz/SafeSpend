@@ -18,7 +18,7 @@ private:
 
     void onLoginClicked();
     void onCreateWalletClicked();
-    void launchMainWindow(Wallet&& wallet);
+    void launchMainWindow(Wallet&& wallet, const QString& password);
 
 private slots:
     void onThemeChanged(bool isDark);

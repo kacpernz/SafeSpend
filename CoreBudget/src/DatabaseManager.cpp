@@ -3,22 +3,29 @@
 #include "EncryptionService.hpp"
 #include "Income.hpp"
 #include "Expense.hpp"
+#include "Transfer.hpp"
 #include <fstream>
 #include <vector>
 #include <cstring>
 
 // ═══════════════════════════════════════════════════════════════════════════════
-//  Format pliku binarnego (v4):
+//  Format pliku binarnego (v5):
 //
 //  [SEKCJA TRANSAKCJI]
 //    Liczba transakcji : size_t
 //    Dla każdej:
-//      typ             : char ('I' = przychód, 'E' = wydatek)
-//      amount          : double
-//      category        : size_t (długość) + chars
-//      date            : size_t (długość) + chars
-//      recurring       : uint8_t
-//      accountName     : size_t (długość) + chars
+//      typ             : char ('I' = przychód, 'E' = wydatek, 'T' = transfer)
+//      Dla I/E:
+//        amount        : double
+//        category      : size_t (długość) + chars
+//        date          : size_t (długość) + chars
+//        recurring     : uint8_t
+//        accountName   : size_t (długość) + chars
+//      Dla T:
+//        amount        : double
+//        fromAccount   : size_t (długość) + chars
+//        toAccount     : size_t (długość) + chars
+//        date          : size_t (długość) + chars
 //
 //  [SEKCJA CELÓW]
 //    Liczba celów      : size_t
@@ -33,7 +40,7 @@
 //      categoryName    : size_t (długość) + chars
 //      limitValue      : double
 //
-//  [GLOBALNY LIMIT BUDŻETU]    ← NOWE (v4)
+//  [GLOBALNY LIMIT BUDŻETU]    ← v4
 //    monthlyBudgetLimit : double
 // ═══════════════════════════════════════════════════════════════════════════════
 
@@ -85,6 +92,14 @@ void DatabaseManager::saveWallet(const Wallet& wallet,
             buffer.push_back(static_cast<char>(expense->recurring ? 1 : 0));
             appendString(expense->accountName);
         }
+        else if (auto transfer = dynamic_cast<Transfer*>(t.get())) {
+            // v5: nowy typ 'T'
+            buffer.push_back('T');
+            appendDouble(transfer->amount);
+            appendString(transfer->fromAccount);
+            appendString(transfer->toAccount);
+            appendString(transfer->date);
+        }
     }
 
     // ── SEKCJA CELÓW ─────────────────────────────────────────────────────────
@@ -97,7 +112,7 @@ void DatabaseManager::saveWallet(const Wallet& wallet,
         appendDouble(g.currentAmount);
     }
 
-    // ── SEKCJA LIMITÓW KATEGORII ────────────────────────────────────────────────────
+    // ── SEKCJA LIMITÓW KATEGORII ─────────────────────────────────────────────
     const auto& limits = wallet.getCategoryLimits();
     appendSizeT(limits.size());
 
@@ -106,10 +121,10 @@ void DatabaseManager::saveWallet(const Wallet& wallet,
         appendDouble(kv.second);
     }
 
-    // ── GLOBALNY LIMIT BUDŻETU (v4) ──────────────────────────────────────────────
+    // ── GLOBALNY LIMIT BUDŻETU (v4) ──────────────────────────────────────────
     appendDouble(wallet.getMonthlyBudgetLimit());
 
-    // ── Szyfrowanie i zapis ────────────────────────────────────────────────
+    // ── Szyfrowanie i zapis ──────────────────────────────────────────────────
     EncryptionService encryptor(password);
     encryptor.encryptDecrypt(buffer.data(), buffer.size());
 
@@ -185,25 +200,37 @@ void DatabaseManager::loadWallet(Wallet& wallet,
         if (index >= static_cast<size_t>(size))
             throw DatabaseException("Plik jest uszkodzony lub podano bledne haslo!");
 
-        char type      = buffer[index++];
-        double amount  = readDouble();
-        std::string cat    = readString();
-        std::string date   = readString();
+        char type = buffer[index++];
 
-        if (index >= static_cast<size_t>(size))
-            throw DatabaseException("Plik jest uszkodzony (brak flagi cyklicznej)!");
-        bool recurring = (static_cast<uint8_t>(buffer[index++]) != 0);
-
-        std::string accountName = readString();
-
-        if (type == 'I') {
+        if (type == 'T') {
+            // v5: Transfer — brak pola recurring
+            double amount      = readDouble();
+            std::string fromAcc = readString();
+            std::string toAcc   = readString();
+            std::string date    = readString();
             wallet.addTransaction(
-                std::make_unique<Income>(amount, cat, date, recurring, accountName));
-        } else if (type == 'E') {
-            wallet.addTransaction(
-                std::make_unique<Expense>(amount, cat, date, recurring, accountName));
+                std::make_unique<Transfer>(amount, fromAcc, toAcc, date));
         } else {
-            throw DatabaseException("Nieznany typ transakcji. Prawdopodobnie bledne haslo!");
+            // Income / Expense — format v1–v4 bez zmian
+            double amount       = readDouble();
+            std::string cat     = readString();
+            std::string date    = readString();
+
+            if (index >= static_cast<size_t>(size))
+                throw DatabaseException("Plik jest uszkodzony (brak flagi cyklicznej)!");
+            bool recurring = (static_cast<uint8_t>(buffer[index++]) != 0);
+
+            std::string accountName = readString();
+
+            if (type == 'I') {
+                wallet.addTransaction(
+                    std::make_unique<Income>(amount, cat, date, recurring, accountName));
+            } else if (type == 'E') {
+                wallet.addTransaction(
+                    std::make_unique<Expense>(amount, cat, date, recurring, accountName));
+            } else {
+                throw DatabaseException("Nieznany typ transakcji. Prawdopodobnie bledne haslo!");
+            }
         }
     }
 
@@ -219,7 +246,7 @@ void DatabaseManager::loadWallet(Wallet& wallet,
         }
     }
 
-    // ── SEKCJA LIMITÓW KATEGORII ────────────────────────────────────────────────────
+    // ── SEKCJA LIMITÓW KATEGORII ─────────────────────────────────────────────
     if (index < static_cast<size_t>(size)) {
         size_t limitCount = readSizeT();
         for (size_t i = 0; i < limitCount; ++i) {
@@ -230,7 +257,7 @@ void DatabaseManager::loadWallet(Wallet& wallet,
         }
     }
 
-    // ── GLOBALNY LIMIT BUDŻETU (v4) ──────────────────────────────────────────────
+    // ── GLOBALNY LIMIT BUDŻETU (v4) ──────────────────────────────────────────
     // Kompatybilność wsteczna: jeśli plik v3 nie zawiera tego pola,
     // używamy wartości domyślnej 5000.0 i nie rzucamy wyjątku.
     if (index + sizeof(double) <= static_cast<size_t>(size)) {
@@ -238,7 +265,7 @@ void DatabaseManager::loadWallet(Wallet& wallet,
         if (budgetLimit > 0.0)
             wallet.setMonthlyBudgetLimit(budgetLimit);
     }
-    // else: monthlyBudgetLimit pozostaje domyślne 5000.0 (v3 backward compat)
+    // else: monthlyBudgetLimit pozostaje domyślne 5000.0 (v3/v4 backward compat)
 
     file.close();
 }

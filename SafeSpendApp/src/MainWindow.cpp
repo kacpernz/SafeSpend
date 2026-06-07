@@ -4,7 +4,7 @@
 #include "DatabaseManager.hpp"
 #include "Expense.hpp"
 #include "Income.hpp"
-#include "LoginDialog.hpp"
+#include "Transfer.hpp"
 #include "ThemeManager.hpp"
 
 #include <QDate>
@@ -23,7 +23,9 @@
 #include <QMap>
 #include <QMessageBox>
 #include <QScrollArea>
+#include <QShortcut>
 #include <QSplitter>
+#include <QStatusBar>
 #include <QStringList>
 #include <QTextStream>
 #include <QVBoxLayout>
@@ -41,6 +43,8 @@
 #include <QtCharts/QValueAxis>
 
 // (stała MONTHLY_BUDGET_LIMIT usunięta — wartość przechowywana w wallet.getMonthlyBudgetLimit())
+
+
 
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -76,6 +80,21 @@ void MainWindow::refreshAll() {
   updateEnvelopeBudgets();
   refreshGoalsTab();
   refreshAccountsTab();
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+//  Auto-zapis (cichy, bez dialogu) — Cel 1
+// ═══════════════════════════════════════════════════════════════════════════════
+void MainWindow::autoSave() {
+  if (m_savePassword.empty())
+    return; // hasło jeszcze niedostępne — pomiń
+  DatabaseManager dbManager;
+  try {
+    dbManager.saveWallet(wallet, "finanse_baza.bin", m_savePassword);
+  } catch (const DatabaseException &e) {
+    // Zapisujemy cicho; błąd wyświetlamy tylko jeśli użytkownik nacisnął Ctrl+S
+    Q_UNUSED(e)
+  }
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -233,11 +252,9 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent) {
   buttonRow->setSpacing(10);
 
   addTransactionButton = makeButton("➕  Dodaj transakcję", "#0d6efd");
-  saveButton = makeButton("💾  Zapisz zaszyfrowane dane", "#0f7a4e");
   exportCsvButton = makeButton("📄  Eksportuj do CSV", "#7c3aed");
 
   buttonRow->addWidget(addTransactionButton);
-  buttonRow->addWidget(saveButton);
   buttonRow->addWidget(exportCsvButton);
   layout1->addLayout(buttonRow);
 
@@ -358,13 +375,10 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent) {
   goalsBtnRow->setSpacing(10);
   QPushButton *newGoalBtn = makeButton("🎯  Nowy cel", "#0f7a4e");
   QPushButton *fundGoalBtn = makeButton("💰  Zasil cel", "#0d6efd");
-  QPushButton *saveGoalBtn = makeButton("💾  Zapisz", "#7c3aed");
   newGoalBtn->setParent(tab3);
   fundGoalBtn->setParent(tab3);
-  saveGoalBtn->setParent(tab3);
   goalsBtnRow->addWidget(newGoalBtn);
   goalsBtnRow->addWidget(fundGoalBtn);
-  goalsBtnRow->addWidget(saveGoalBtn);
   goalsBtnRow->addStretch();
   layout3->addLayout(goalsBtnRow);
 
@@ -432,61 +446,47 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent) {
   tabWidget->addTab(tab4, "🏦  Konta");
 
   // ═════════════════════════════════════════════════════════════════════════
-  //  Połączenia sygnałów
-  // ═════════════════════════════════════════════════════════════════════════
-
   connect(searchBar, &QLineEdit::textChanged, this, &MainWindow::applySearch);
 
-  // Dodawanie transakcji
+  // Dodawanie transakcji (z obsługą Transfer)
   connect(addTransactionButton, &QPushButton::clicked, this, [this]() {
     AddTransactionDialog dialog(this);
     if (dialog.exec() == QDialog::Accepted) {
       double amount = dialog.getAmount();
-      QString category = dialog.getCategory();
-      QString type = dialog.getTransactionType();
-      bool recurring = dialog.getIsRecurring();
-      QString accountName = dialog.getAccountName();
+      QString type  = dialog.getTransactionType();
       QString today = QDate::currentDate().toString("yyyy-MM-dd");
 
-      if (type == "Przychod") {
+      if (type == "Transfer") {
+        QString from = dialog.getFromAccount();
+        QString to   = dialog.getToAccount();
+        if (from == to) {
+          QMessageBox::warning(this, "Transfer",
+            "Konta źródłowe i docelowe muszą być różne!");
+          return;
+        }
+        wallet.addTransaction(std::make_unique<Transfer>(
+            amount, from.toStdString(), to.toStdString(), today.toStdString()));
+      } else if (type == "Przychod") {
         wallet.addTransaction(std::make_unique<Income>(
-            amount, category.toStdString(), today.toStdString(), recurring,
-            accountName.toStdString()));
+            amount, dialog.getCategory().toStdString(),
+            today.toStdString(), dialog.getIsRecurring(),
+            dialog.getAccountName().toStdString()));
       } else {
         wallet.addTransaction(std::make_unique<Expense>(
-            amount, category.toStdString(), today.toStdString(), recurring,
-            accountName.toStdString()));
+            amount, dialog.getCategory().toStdString(),
+            today.toStdString(), dialog.getIsRecurring(),
+            dialog.getAccountName().toStdString()));
       }
       refreshAll();
+      autoSave();
     }
   });
 
-  // Zapis zaszyfrowany
-  auto saveAction = [this]() {
-    LoginDialog loginDialog(this);
-    if (loginDialog.exec() == QDialog::Accepted) {
-      DatabaseManager dbManager;
-      try {
-        dbManager.saveWallet(wallet, "finanse_baza.bin",
-                             loginDialog.getPassword().toStdString());
-        QMessageBox::information(
-            this, "Sukces",
-            "✔  Dane zostały bezpiecznie zaszyfrowane i zapisane!");
-      } catch (const DatabaseException &e) {
-        QMessageBox::critical(this, "Błąd",
-                              QString("Błąd zapisu: %1").arg(e.what()));
-      }
-    }
-  };
-
-  connect(saveButton, &QPushButton::clicked, this, saveAction);
-  connect(saveGoalBtn, &QPushButton::clicked, this, saveAction);
-  connect(exportCsvButton, &QPushButton::clicked, this,
-          &MainWindow::exportToCSV);
+  // Eksport CSV
+  connect(exportCsvButton, &QPushButton::clicked, this, &MainWindow::exportToCSV);
 
   // Zarządzaj limitami
-  connect(limitsBtn, &QPushButton::clicked, this,
-          &MainWindow::openLimitsDialog);
+  connect(limitsBtn, &QPushButton::clicked, this, &MainWindow::openLimitsDialog);
 
   // Nowy cel
   connect(newGoalBtn, &QPushButton::clicked, this, [this]() {
@@ -509,6 +509,7 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent) {
     g.currentAmount = 0.0;
     wallet.addGoal(g);
     refreshGoalsTab();
+    autoSave();
   });
 
   // Zasil cel
@@ -559,13 +560,27 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent) {
     wallet.fundGoal(static_cast<size_t>(idx), amount);
 
     refreshAll();
+    autoSave();
+  });
+
+  // ── Skrót klawiszowy Ctrl+S — ręczny zapis ──────────────────────────────
+  QShortcut *saveShortcut = new QShortcut(QKeySequence::Save, this);
+  connect(saveShortcut, &QShortcut::activated, this, [this]() {
+    if (m_savePassword.empty()) return;
+    DatabaseManager dbManager;
+    try {
+      dbManager.saveWallet(wallet, "finanse_baza.bin", m_savePassword);
+      statusBar()->showMessage("✔  Dane zapisane pomyślnie (Ctrl+S)", 3000);
+    } catch (const DatabaseException &e) {
+      QMessageBox::critical(this, "Błąd zapisu",
+                            QString("Błąd: %1").arg(e.what()));
+    }
   });
 
   // Inicjalizacja wizualizacji
   refreshAll();
 
-  // ── Połączenia: ThemeManager
-  // ─────────────────────────────────────────────────
+  // ── Połączenia: ThemeManager ─────────────────────────────────────────────
   connect(themeToggleBtn, &QPushButton::clicked, ThemeManager::instance(),
           &ThemeManager::toggleTheme);
 
@@ -576,11 +591,14 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent) {
 // ═══════════════════════════════════════════════════════════════════════════════
 //  loadWalletData — wywoływane z WelcomeWindow po zalogowaniu
 // ═══════════════════════════════════════════════════════════════════════════════
-void MainWindow::loadWalletData(Wallet &&loadedWallet) {
+void MainWindow::loadWalletData(Wallet &&loadedWallet, const std::string &password) {
+  m_savePassword = password;  // zapamiętaj hasło do auto-zapisu
   wallet = std::move(loadedWallet);
   checkRecurringTransactions();
   refreshAll();
+  autoSave(); // zapisz po wczytaniu (na wypadek dodanych transakcji cyklicznych)
 }
+
 
 // ═══════════════════════════════════════════════════════════════════════════════
 //  Cel 4 — Reaktywna zmiana motywu wykresów i UI
@@ -909,6 +927,7 @@ void MainWindow::openLimitsDialog() {
       wallet.setCategoryLimit(it.key().toStdString(), it.value()->value());
     }
     refreshAll();
+    autoSave();
     dlg->accept();
   });
   connect(btnBox, &QDialogButtonBox::rejected, dlg, &QDialog::reject);
@@ -1039,6 +1058,7 @@ void MainWindow::updateBarChart() {
     if (dynamic_cast<Income *>(t.get())) {
       monthlyIncome[monthKey] += t->getAmount();
     } else if (dynamic_cast<Expense *>(t.get())) {
+      // Transfer jest pomijany — nie zmienia głównego bilansu
       monthlyExpense[monthKey] += t->getAmount();
     }
   }
@@ -1062,10 +1082,17 @@ void MainWindow::updateBarChart() {
     return;
   }
 
-  QBarSet *incomeSet = new QBarSet("Przychody");
+  // Cel 4: pastelowe kolory spójne z paskami kopertowymi
+  // Zielony = identyczny jak "OK" w updateEnvelopeBudgets → #22c55e (ciemniejszy pastel)
+  // Czerwony = identyczny jak "danger" w updateEnvelopeBudgets → #ef4444
+  // Używamy lekko rozjaśnionych wariantów dla przyjemniejszego wykresu słupkowego
+  QBarSet *incomeSet  = new QBarSet("Przychody");
   QBarSet *expenseSet = new QBarSet("Wydatki");
-  incomeSet->setColor(QColor("#22c55e"));
-  expenseSet->setColor(QColor("#ef4444"));
+  incomeSet->setColor(QColor("#4ade80"));   // pastelowa zieleń (#22c55e rozjaśniona)
+  expenseSet->setColor(QColor("#f87171"));  // pastelowa czerwień (#ef4444 rozjaśniona)
+  // Etykiety tooltipów w legendzie
+  incomeSet->setBorderColor(QColor("#22c55e"));
+  expenseSet->setBorderColor(QColor("#ef4444"));
 
   QStringList displayMonths;
   for (const QString &m : months) {
@@ -1098,6 +1125,7 @@ void MainWindow::updateBarChart() {
 
   chart->legend()->setLabelColor(QColor("#94a3b8"));
 }
+
 
 // ═══════════════════════════════════════════════════════════════════════════════
 //  Budżetowanie kopertowe — dynamiczne, z categoryLimits z Wallet
@@ -1383,6 +1411,12 @@ void MainWindow::refreshGoalsTab() {
     return;
   }
 
+  // Cel 3: siatka kafelków — max 3 w rzędzie
+  QGridLayout *grid = new QGridLayout();
+  grid->setSpacing(12);
+  const int MAX_COLS = 3;
+  int col = 0, row = 0;
+
   for (size_t i = 0; i < goals.size(); ++i) {
     const Goal &g = goals[i];
     double pct_d =
@@ -1451,11 +1485,20 @@ void MainWindow::refreshGoalsTab() {
       cardLayout->addWidget(doneLabel);
     }
 
-    goalsLayout->addWidget(card);
+    grid->addWidget(card, row, col++);
+    if (col >= MAX_COLS) {
+      col = 0;
+      ++row;
+    }
   }
 
+  QWidget *gridWrapper = new QWidget();
+  gridWrapper->setLayout(grid);
+  gridWrapper->setStyleSheet("background: transparent;");
+  goalsLayout->addWidget(gridWrapper);
   goalsLayout->addStretch();
 }
+
 
 // ═══════════════════════════════════════════════════════════════════════════════
 //  Wyszukiwarka
@@ -1609,17 +1652,32 @@ void MainWindow::refreshTable() {
     historyTable->setItem(
         i, 1, new QTableWidgetItem(QString::fromStdString(t->getCategory())));
 
-    bool isIncome = (dynamic_cast<Income *>(t.get()) != nullptr);
-    QString typeStr = isIncome ? "Przychód" : "Wydatek";
+    // Typ transakcji — Transfer wyświetlamy neutralnie
+    bool isIncome    = (dynamic_cast<Income *>(t.get()) != nullptr);
+    bool isTransfer  = (dynamic_cast<Transfer *>(t.get()) != nullptr);
+    QString typeStr  = isTransfer ? "Transfer"
+                     : isIncome  ? "Przychód"
+                                 : "Wydatek";
     auto *typeItem = new QTableWidgetItem(typeStr);
-    typeItem->setForeground(isIncome ? QColor("#22c55e") : QColor("#ef4444"));
+    QColor typeColor = isTransfer ? QColor("#38bdf8")
+                     : isIncome  ? QColor("#22c55e")
+                                 : QColor("#ef4444");
+    typeItem->setForeground(typeColor);
     historyTable->setItem(i, 2, typeItem);
 
     historyTable->setItem(
         i, 3, new QTableWidgetItem(QString::number(t->getAmount(), 'f', 2)));
-    historyTable->setItem(
-        i, 4,
-        new QTableWidgetItem(QString::fromStdString(t->getAccountName())));
+
+    // Konto: dla Transfer pokaż "Z konta → Na konto"
+    QString accountStr;
+    if (auto *tr = dynamic_cast<Transfer *>(t.get())) {
+      accountStr = QString("%1 → %2")
+                       .arg(QString::fromStdString(tr->getFromAccount()))
+                       .arg(QString::fromStdString(tr->getToAccount()));
+    } else {
+      accountStr = QString::fromStdString(t->getAccountName());
+    }
+    historyTable->setItem(i, 4, new QTableWidgetItem(accountStr));
 
     QString recStr = t->isRecurring() ? "♻  Tak" : "—";
     auto *recItem = new QTableWidgetItem(recStr);

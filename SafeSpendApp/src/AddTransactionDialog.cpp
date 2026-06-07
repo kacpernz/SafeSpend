@@ -1,37 +1,50 @@
 #include "AddTransactionDialog.hpp"
-#include <QFormLayout>
+#include "ThemeManager.hpp"
 #include <QDialogButtonBox>
-#include <QLabel>
+#include <QVBoxLayout>
+
+// Konta dostępne w całej aplikacji
+static const QStringList ALL_ACCOUNTS = {
+    "Gotówka", "Konto bankowe", "Karta kredytowa", "Oszczędności"
+};
 
 AddTransactionDialog::AddTransactionDialog(QWidget* parent) : QDialog(parent) {
     setWindowTitle("Dodaj transakcję");
-    resize(360, 230);
-    setStyleSheet(R"(
-        QDialog {
-            background-color: #111827;
-        }
-        QLabel {
-            color: #94a3b8;
-            font-size: 13px;
-        }
+    resize(380, 280);
+    setMinimumWidth(360);
+
+    // ── Styl dynamiczny (motyw) ───────────────────────────────────────────────
+    bool isDark = ThemeManager::instance()->isDark();
+    QString bg      = isDark ? "#111827" : "#f8fafc";
+    QString input   = isDark ? "#1e293b" : "#ffffff";
+    QString border  = isDark ? "#334155" : "#cbd5e1";
+    QString text    = isDark ? "#e2e8f0" : "#1e293b";
+    QString accent  = isDark ? "#3d8bfd" : "#2563eb";
+    QString subtext = isDark ? "#94a3b8" : "#475569";
+
+    setStyleSheet(QString(R"(
+        QDialog { background-color: %1; }
+        QLabel  { color: %2; font-size: 13px; }
         QComboBox, QLineEdit, QDoubleSpinBox {
-            background-color: #1e293b;
-            color: #e2e8f0;
-            border: 1px solid #334155;
+            background-color: %3;
+            color: %4;
+            border: 1px solid %5;
             border-radius: 6px;
             padding: 6px 10px;
             font-size: 13px;
         }
-        QComboBox::drop-down {
-            border: none;
-        }
+        QComboBox::drop-down { border: none; }
         QComboBox QAbstractItemView {
-            background-color: #1e293b;
-            color: #e2e8f0;
-            selection-background-color: #0d6efd;
+            background-color: %3;
+            color: %4;
+            selection-background-color: %6;
         }
+        QComboBox:focus, QLineEdit:focus, QDoubleSpinBox:focus {
+            border: 1px solid %6;
+        }
+        QCheckBox { color: %7; font-size: 13px; }
         QDialogButtonBox QPushButton {
-            background-color: #0d6efd;
+            background-color: %6;
             color: white;
             border: none;
             border-radius: 6px;
@@ -39,48 +52,99 @@ AddTransactionDialog::AddTransactionDialog(QWidget* parent) : QDialog(parent) {
             font-size: 13px;
             font-weight: bold;
         }
-        QDialogButtonBox QPushButton:hover {
-            background-color: #3d8bfd;
-        }
-    )");
+        QDialogButtonBox QPushButton:hover { opacity: 0.85; }
+    )").arg(bg).arg(text).arg(input).arg(text).arg(border).arg(accent).arg(subtext));
 
-    QFormLayout* layout = new QFormLayout(this);
-    layout->setSpacing(12);
-    layout->setContentsMargins(20, 20, 20, 16);
+    // ── Główny layout ─────────────────────────────────────────────────────────
+    QVBoxLayout* mainLayout = new QVBoxLayout(this);
+    mainLayout->setContentsMargins(20, 20, 20, 16);
+    mainLayout->setSpacing(8);
 
+    formLayout = new QFormLayout();
+    formLayout->setSpacing(10);
+    formLayout->setLabelAlignment(Qt::AlignLeft | Qt::AlignVCenter);
+    mainLayout->addLayout(formLayout);
+
+    // ── Typ transakcji ────────────────────────────────────────────────────────
     typeComboBox = new QComboBox(this);
     typeComboBox->addItem("Wydatek");
     typeComboBox->addItem("Przychod");
+    typeComboBox->addItem("Transfer");
+    formLayout->addRow("Typ:", typeComboBox);
 
+    // ── Kwota ─────────────────────────────────────────────────────────────────
     amountSpinBox = new QDoubleSpinBox(this);
     amountSpinBox->setMaximum(1000000.0);
     amountSpinBox->setDecimals(2);
     amountSpinBox->setSuffix(" PLN");
+    formLayout->addRow("Kwota:", amountSpinBox);
 
+    // ── Pola dla Income / Expense ─────────────────────────────────────────────
+    categoryLabel    = new QLabel("Kategoria:", this);
     categoryLineEdit = new QLineEdit(this);
     categoryLineEdit->setPlaceholderText("np. Jedzenie, Rata, Wynagrodzenie...");
+    formLayout->addRow(categoryLabel, categoryLineEdit);
 
+    accountLabel   = new QLabel("Konto:", this);
     accountComboBox = new QComboBox(this);
-    accountComboBox->addItem("Gotówka");
-    accountComboBox->addItem("Konto bankowe");
-    accountComboBox->addItem("Karta kredytowa");
-    accountComboBox->addItem("Oszczędności");
+    for (const QString& acc : ALL_ACCOUNTS)
+        accountComboBox->addItem(acc);
+    formLayout->addRow(accountLabel, accountComboBox);
 
+    recurringLabel    = new QLabel("", this);
     recurringCheckBox = new QCheckBox("Płatność co miesiąc", this);
-    recurringCheckBox->setStyleSheet("QCheckBox { color: #9baacf; font-size: 13px; }");
+    formLayout->addRow(recurringLabel, recurringCheckBox);
 
-    layout->addRow("Typ:",        typeComboBox);
-    layout->addRow("Kwota:",      amountSpinBox);
-    layout->addRow("Kategoria:",  categoryLineEdit);
-    layout->addRow("Konto:",      accountComboBox);
-    layout->addRow("",            recurringCheckBox);
+    // ── Pola dla Transfer ─────────────────────────────────────────────────────
+    fromAccountLabel   = new QLabel("Z konta:", this);
+    fromAccountComboBox = new QComboBox(this);
+    for (const QString& acc : ALL_ACCOUNTS)
+        fromAccountComboBox->addItem(acc);
+    formLayout->addRow(fromAccountLabel, fromAccountComboBox);
 
+    toAccountLabel   = new QLabel("Na konto:", this);
+    toAccountComboBox = new QComboBox(this);
+    for (const QString& acc : ALL_ACCOUNTS)
+        toAccountComboBox->addItem(acc);
+    if (toAccountComboBox->count() > 1)
+        toAccountComboBox->setCurrentIndex(1); // domyślnie inne niż fromAccount
+    formLayout->addRow(toAccountLabel, toAccountComboBox);
+
+    // ── Przyciski OK / Anuluj ─────────────────────────────────────────────────
     QDialogButtonBox* buttonBox =
         new QDialogButtonBox(QDialogButtonBox::Ok | QDialogButtonBox::Cancel, this);
-    layout->addWidget(buttonBox);
+    mainLayout->addWidget(buttonBox);
 
     connect(buttonBox, &QDialogButtonBox::accepted, this, &QDialog::accept);
     connect(buttonBox, &QDialogButtonBox::rejected, this, &QDialog::reject);
+
+    // ── Dynamiczne przełączanie pól przy zmianie typu ─────────────────────────
+    connect(typeComboBox, &QComboBox::currentTextChanged,
+            this, &AddTransactionDialog::updateFieldVisibility);
+
+    // Inicjalizacja — pokaż pola dla Wydatku (domyślny)
+    updateFieldVisibility(typeComboBox->currentText());
+}
+
+void AddTransactionDialog::updateFieldVisibility(const QString& type) {
+    bool isTransfer = (type == "Transfer");
+
+    // Pola Income/Expense
+    categoryLabel->setVisible(!isTransfer);
+    categoryLineEdit->setVisible(!isTransfer);
+    accountLabel->setVisible(!isTransfer);
+    accountComboBox->setVisible(!isTransfer);
+    recurringLabel->setVisible(!isTransfer);
+    recurringCheckBox->setVisible(!isTransfer);
+
+    // Pola Transfer
+    fromAccountLabel->setVisible(isTransfer);
+    fromAccountComboBox->setVisible(isTransfer);
+    toAccountLabel->setVisible(isTransfer);
+    toAccountComboBox->setVisible(isTransfer);
+
+    // Dostosuj rozmiar okna
+    adjustSize();
 }
 
 QString AddTransactionDialog::getTransactionType() const {
@@ -101,4 +165,12 @@ bool AddTransactionDialog::getIsRecurring() const {
 
 QString AddTransactionDialog::getAccountName() const {
     return accountComboBox->currentText();
+}
+
+QString AddTransactionDialog::getFromAccount() const {
+    return fromAccountComboBox->currentText();
+}
+
+QString AddTransactionDialog::getToAccount() const {
+    return toAccountComboBox->currentText();
 }

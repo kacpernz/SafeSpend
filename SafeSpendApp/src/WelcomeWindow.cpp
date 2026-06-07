@@ -257,7 +257,8 @@ void WelcomeWindow::onLoginClicked() {
     try {
         Wallet loadedWallet;
         dbManager.loadWallet(loadedWallet, "finanse_baza.bin", password.toStdString());
-        launchMainWindow(std::move(loadedWallet));
+        launchMainWindow(std::move(loadedWallet), password);
+
     } catch (const DatabaseException& e) {
         statusLabel->setStyleSheet("background: transparent; color: #ff6b6b;");
         statusLabel->setText(QString("✗  Nieprawidłowe hasło lub uszkodzony plik."));
@@ -303,14 +304,14 @@ void WelcomeWindow::onCreateWalletClicked() {
 
     statusLabel->setStyleSheet("background: transparent; color: #06d6a0;");
     statusLabel->setText("✔  Portfel utworzony pomyślnie!");
-    launchMainWindow(std::move(emptyWallet));
+    launchMainWindow(std::move(emptyWallet), password);
 }
 
 // ─── launch MainWindow ────────────────────────────────────────────────────────
-void WelcomeWindow::launchMainWindow(Wallet&& wallet) {
+void WelcomeWindow::launchMainWindow(Wallet&& wallet, const QString& password) {
     MainWindow* mainWin = new MainWindow();
     mainWin->setAttribute(Qt::WA_DeleteOnClose);
-    mainWin->loadWalletData(std::move(wallet));
+    mainWin->loadWalletData(std::move(wallet), password.toStdString());
 
     connect(mainWin, &QObject::destroyed, qApp, &QCoreApplication::quit);
 
