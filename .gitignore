@@ -4,6 +4,7 @@ build/
 
 # Pliki systemowe macOS
 .DS_Store
+**/.DS_Store
 
 # Pliki wygenerowane przez program
 *.bin
