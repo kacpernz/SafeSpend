@@ -4,8 +4,8 @@
 #include "DatabaseManager.hpp"
 #include "Expense.hpp"
 #include "Income.hpp"
-#include "Transfer.hpp"
 #include "ThemeManager.hpp"
+#include "Transfer.hpp"
 
 #include <QDate>
 #include <QDialog>
@@ -42,10 +42,8 @@
 #include <QtCharts/QPieSlice>
 #include <QtCharts/QValueAxis>
 
-// (stała MONTHLY_BUDGET_LIMIT usunięta — wartość przechowywana w wallet.getMonthlyBudgetLimit())
-
-
-
+// (stała MONTHLY_BUDGET_LIMIT usunięta — wartość przechowywana w
+// wallet.getMonthlyBudgetLimit())
 
 // ═══════════════════════════════════════════════════════════════════════════════
 //  Pomocnicze
@@ -193,14 +191,15 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent) {
   budgetLabel->setStyleSheet("color: #94a3b8; font-size: 12px;");
   layout1->addWidget(budgetLabel);
 
-
   budgetBar = new QProgressBar(this);
   budgetBar->setRange(0, 100);
   budgetBar->setValue(0);
   budgetBar->setFixedHeight(22);
   budgetBar->setTextVisible(true);
-  budgetBar->setFormat("0 / 5000 PLN  (0%)");  // zostanie nadpisane przez updateBudgetBar()
-  // Styl paska budżetu zarządzany przez updateBudgetBar() z uwzględnieniem motywu
+  budgetBar->setFormat(
+      "0 / 5000 PLN  (0%)"); // zostanie nadpisane przez updateBudgetBar()
+  // Styl paska budżetu zarządzany przez updateBudgetBar() z uwzględnieniem
+  // motywu
   layout1->addWidget(budgetBar);
 
   // ── Przyciski akcji ───────────────────────────────────────────────────────
@@ -397,29 +396,27 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent) {
     AddTransactionDialog dialog(this);
     if (dialog.exec() == QDialog::Accepted) {
       double amount = dialog.getAmount();
-      QString type  = dialog.getTransactionType();
+      QString type = dialog.getTransactionType();
       QString today = QDate::currentDate().toString("yyyy-MM-dd");
 
       if (type == "Transfer") {
         QString from = dialog.getFromAccount();
-        QString to   = dialog.getToAccount();
+        QString to = dialog.getToAccount();
         if (from == to) {
           QMessageBox::warning(this, "Transfer",
-            "Konta źródłowe i docelowe muszą być różne!");
+                               "Konta źródłowe i docelowe muszą być różne!");
           return;
         }
         wallet.addTransaction(std::make_unique<Transfer>(
             amount, from.toStdString(), to.toStdString(), today.toStdString()));
       } else if (type == "Przychod") {
         wallet.addTransaction(std::make_unique<Income>(
-            amount, dialog.getCategory().toStdString(),
-            today.toStdString(), dialog.getIsRecurring(),
-            dialog.getAccountName().toStdString()));
+            amount, dialog.getCategory().toStdString(), today.toStdString(),
+            dialog.getIsRecurring(), dialog.getAccountName().toStdString()));
       } else {
         wallet.addTransaction(std::make_unique<Expense>(
-            amount, dialog.getCategory().toStdString(),
-            today.toStdString(), dialog.getIsRecurring(),
-            dialog.getAccountName().toStdString()));
+            amount, dialog.getCategory().toStdString(), today.toStdString(),
+            dialog.getIsRecurring(), dialog.getAccountName().toStdString()));
       }
       refreshAll();
       autoSave();
@@ -427,10 +424,12 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent) {
   });
 
   // Eksport CSV
-  connect(exportCsvButton, &QPushButton::clicked, this, &MainWindow::exportToCSV);
+  connect(exportCsvButton, &QPushButton::clicked, this,
+          &MainWindow::exportToCSV);
 
   // Zarządzaj limitami
-  connect(limitsBtn, &QPushButton::clicked, this, &MainWindow::openLimitsDialog);
+  connect(limitsBtn, &QPushButton::clicked, this,
+          &MainWindow::openLimitsDialog);
 
   // Nowy cel
   connect(newGoalBtn, &QPushButton::clicked, this, [this]() {
@@ -510,11 +509,12 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent) {
   // ── Skrót klawiszowy Ctrl+S — ręczny zapis ──────────────────────────────
   QShortcut *saveShortcut = new QShortcut(QKeySequence::Save, this);
   connect(saveShortcut, &QShortcut::activated, this, [this]() {
-    if (m_savePassword.empty()) return;
+    if (m_savePassword.empty())
+      return;
     DatabaseManager dbManager;
     try {
       dbManager.saveWallet(wallet, "finanse_baza.bin", m_savePassword);
-      statusBar()->showMessage("✔  Dane zapisane pomyślnie (Ctrl+S)", 3000);
+      statusBar()->showMessage("✔  Dane zapisane pomyślnie", 3000);
     } catch (const DatabaseException &e) {
       QMessageBox::critical(this, "Błąd zapisu",
                             QString("Błąd: %1").arg(e.what()));
@@ -535,14 +535,15 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent) {
 // ═══════════════════════════════════════════════════════════════════════════════
 //  loadWalletData — wywoływane z WelcomeWindow po zalogowaniu
 // ═══════════════════════════════════════════════════════════════════════════════
-void MainWindow::loadWalletData(Wallet &&loadedWallet, const std::string &password) {
-  m_savePassword = password;  // zapamiętaj hasło do auto-zapisu
+void MainWindow::loadWalletData(Wallet &&loadedWallet,
+                                const std::string &password) {
+  m_savePassword = password; // zapamiętaj hasło do auto-zapisu
   wallet = std::move(loadedWallet);
   checkRecurringTransactions();
   refreshAll();
-  autoSave(); // zapisz po wczytaniu (na wypadek dodanych transakcji cyklicznych)
+  autoSave(); // zapisz po wczytaniu (na wypadek dodanych transakcji
+              // cyklicznych)
 }
-
 
 // ═══════════════════════════════════════════════════════════════════════════════
 //  Cel 4 — Reaktywna zmiana motywu wykresów i UI
@@ -567,7 +568,7 @@ void MainWindow::onThemeChanged(bool isDark) {
 
   // 4. Zaktualizuj styl toolbara (ma własne QSS poza globalnym arkuszem)
   if (QWidget *tb = qobject_cast<QWidget *>(themeToggleBtn->parent())) {
-    QString tbBg     = isDark ? "#0f172a" : "#FFFFFF";
+    QString tbBg = isDark ? "#0f172a" : "#FFFFFF";
     QString tbBorder = isDark ? "#1e293b" : "#E9ECEF";
     tb->setStyleSheet(QString("background: %1; border-bottom: 1px solid %2;")
                           .arg(tbBg)
@@ -616,14 +617,14 @@ void MainWindow::openLimitsDialog() {
   dlg->setAttribute(Qt::WA_DeleteOnClose);
   // Styl dialogu zgodny z aktualnym motywem (ciemny / jasny)
   bool isDarkTheme = ThemeManager::instance()->isDark();
-  QString dlgBg         = isDarkTheme ? "#111827" : "#f8fafc";
-  QString dlgInput      = isDarkTheme ? "#1e293b" : "#ffffff";
-  QString dlgInputBorder= isDarkTheme ? "#334155" : "#cbd5e1";
-  QString dlgTextMain   = isDarkTheme ? "#e2e8f0" : "#1e293b";
-  QString dlgTextMuted  = isDarkTheme ? "#94a3b8" : "#475569";
-  QString dlgAccent     = isDarkTheme ? "#3d8bfd" : "#2563eb";
-  QString dlgCancelBg   = isDarkTheme ? "#334155" : "#e2e8f0";
-  QString dlgCancelHov  = isDarkTheme ? "#475569" : "#cbd5e1";
+  QString dlgBg = isDarkTheme ? "#111827" : "#f8fafc";
+  QString dlgInput = isDarkTheme ? "#1e293b" : "#ffffff";
+  QString dlgInputBorder = isDarkTheme ? "#334155" : "#cbd5e1";
+  QString dlgTextMain = isDarkTheme ? "#e2e8f0" : "#1e293b";
+  QString dlgTextMuted = isDarkTheme ? "#94a3b8" : "#475569";
+  QString dlgAccent = isDarkTheme ? "#3d8bfd" : "#2563eb";
+  QString dlgCancelBg = isDarkTheme ? "#334155" : "#e2e8f0";
+  QString dlgCancelHov = isDarkTheme ? "#475569" : "#cbd5e1";
 
   dlg->setStyleSheet(QString(R"(
         QDialog {
@@ -669,16 +670,15 @@ void MainWindow::openLimitsDialog() {
             background-color: %8;
         }
     )")
-    .arg(dlgBg)         // %1
-    .arg(dlgTextMain)   // %2
-    .arg(dlgInput)      // %3
-    .arg(dlgTextMain)   // %4
-    .arg(dlgInputBorder)// %5
-    .arg(dlgAccent)     // %6
-    .arg(dlgCancelBg)   // %7
-    .arg(dlgCancelHov)  // %8
+                         .arg(dlgBg)          // %1
+                         .arg(dlgTextMain)    // %2
+                         .arg(dlgInput)       // %3
+                         .arg(dlgTextMain)    // %4
+                         .arg(dlgInputBorder) // %5
+                         .arg(dlgAccent)      // %6
+                         .arg(dlgCancelBg)    // %7
+                         .arg(dlgCancelHov)   // %8
   );
-
 
   QVBoxLayout *dlgLayout = new QVBoxLayout(dlg);
   dlgLayout->setContentsMargins(20, 20, 20, 16);
@@ -703,11 +703,13 @@ void MainWindow::openLimitsDialog() {
       "color: #38bdf8; font-weight: bold; font-size: 14px; padding: 2px 0;");
   dlgLayout->addWidget(budgetSectionTitle);
 
-  QLabel *budgetSectionHint = new QLabel(
-      "Całkowity limit wydatków w bieżącym miesiącu (widoczny na pasku budżetu).",
-      dlg);
+  QLabel *budgetSectionHint =
+      new QLabel("Całkowity limit wydatków w bieżącym miesiącu (widoczny na "
+                 "pasku budżetu).",
+                 dlg);
   budgetSectionHint->setWordWrap(true);
-  budgetSectionHint->setStyleSheet("color: #64748b; font-size: 11px; margin-bottom: 2px;");
+  budgetSectionHint->setStyleSheet(
+      "color: #64748b; font-size: 11px; margin-bottom: 2px;");
   dlgLayout->addWidget(budgetSectionHint);
 
   QFormLayout *budgetForm = new QFormLayout();
@@ -723,7 +725,8 @@ void MainWindow::openLimitsDialog() {
   globalBudgetSpin->setObjectName("globalBudgetSpin");
 
   QLabel *globalBudgetLabel = new QLabel("Limit globalny:", dlg);
-  globalBudgetLabel->setStyleSheet("color: #e2e8f0; font-size: 13px; font-weight: bold;");
+  globalBudgetLabel->setStyleSheet(
+      "color: #e2e8f0; font-size: 13px; font-weight: bold;");
   budgetForm->addRow(globalBudgetLabel, globalBudgetSpin);
   dlgLayout->addLayout(budgetForm);
 
@@ -737,7 +740,6 @@ void MainWindow::openLimitsDialog() {
   existingTitle->setStyleSheet(
       "color: #e2e8f0; font-weight: bold; font-size: 13px;");
   dlgLayout->addWidget(existingTitle);
-
 
   // Zbierz aktualne limity + spinboxy do mapy
   const auto &currentLimits = wallet.getCategoryLimits();
@@ -866,18 +868,21 @@ void MainWindow::openLimitsDialog() {
       QDialogButtonBox::Ok | QDialogButtonBox::Cancel, dlg);
   dlgLayout->addWidget(btnBox);
 
-  connect(btnBox, &QDialogButtonBox::accepted, dlg, [this, dlg, &spinBoxes, globalBudgetSpin]() {
-    // Zapisz globalny limit budżetu
-    wallet.setMonthlyBudgetLimit(globalBudgetSpin->value());
+  connect(btnBox, &QDialogButtonBox::accepted, dlg,
+          [this, dlg, &spinBoxes, globalBudgetSpin]() {
+            // Zapisz globalny limit budżetu
+            wallet.setMonthlyBudgetLimit(globalBudgetSpin->value());
 
-    // Zapisz limity kategorii
-    for (auto it = spinBoxes.constBegin(); it != spinBoxes.constEnd(); ++it) {
-      wallet.setCategoryLimit(it.key().toStdString(), it.value()->value());
-    }
-    refreshAll();
-    autoSave();
-    dlg->accept();
-  });
+            // Zapisz limity kategorii
+            for (auto it = spinBoxes.constBegin(); it != spinBoxes.constEnd();
+                 ++it) {
+              wallet.setCategoryLimit(it.key().toStdString(),
+                                      it.value()->value());
+            }
+            refreshAll();
+            autoSave();
+            dlg->accept();
+          });
   connect(btnBox, &QDialogButtonBox::rejected, dlg, &QDialog::reject);
 
   dlg->exec();
@@ -912,8 +917,8 @@ void MainWindow::updateBudgetBar() {
                            .arg(percent));
 
   bool isDark = ThemeManager::instance()->isDark();
-  QString barBg     = isDark ? "#1e293b" : "#E9ECEF";
-  QString barText   = isDark ? "white"   : "#1A1A1A";
+  QString barBg = isDark ? "#1e293b" : "#E9ECEF";
+  QString barText = isDark ? "white" : "#1A1A1A";
 
   if (percent >= 90) {
     budgetBar->setStyleSheet(QString(R"(
@@ -926,7 +931,8 @@ void MainWindow::updateBudgetBar() {
                     stop:0 #b91c1c, stop:1 #ef4444); border-radius: 6px;
             }
         )")
-        .arg(barBg).arg(barText));
+                                 .arg(barBg)
+                                 .arg(barText));
   } else if (percent >= 70) {
     budgetBar->setStyleSheet(QString(R"(
             QProgressBar {
@@ -938,7 +944,8 @@ void MainWindow::updateBudgetBar() {
                     stop:0 #b45309, stop:1 #f59e0b); border-radius: 6px;
             }
         )")
-        .arg(barBg).arg(barText));
+                                 .arg(barBg)
+                                 .arg(barText));
   } else {
     budgetBar->setStyleSheet(QString(R"(
             QProgressBar {
@@ -950,7 +957,8 @@ void MainWindow::updateBudgetBar() {
                     stop:0 #1a6fdb, stop:1 #0d6efd); border-radius: 6px;
             }
         )")
-        .arg(barBg).arg(barText));
+                                 .arg(barBg)
+                                 .arg(barText));
   }
 }
 
@@ -1038,13 +1046,16 @@ void MainWindow::updateBarChart() {
   }
 
   // Cel 4: pastelowe kolory spójne z paskami kopertowymi
-  // Zielony = identyczny jak "OK" w updateEnvelopeBudgets → #22c55e (ciemniejszy pastel)
-  // Czerwony = identyczny jak "danger" w updateEnvelopeBudgets → #ef4444
-  // Używamy lekko rozjaśnionych wariantów dla przyjemniejszego wykresu słupkowego
-  QBarSet *incomeSet  = new QBarSet("Przychody");
+  // Zielony = identyczny jak "OK" w updateEnvelopeBudgets → #22c55e
+  // (ciemniejszy pastel) Czerwony = identyczny jak "danger" w
+  // updateEnvelopeBudgets → #ef4444 Używamy lekko rozjaśnionych wariantów dla
+  // przyjemniejszego wykresu słupkowego
+  QBarSet *incomeSet = new QBarSet("Przychody");
   QBarSet *expenseSet = new QBarSet("Wydatki");
-  incomeSet->setColor(QColor("#4ade80"));   // pastelowa zieleń (#22c55e rozjaśniona)
-  expenseSet->setColor(QColor("#f87171"));  // pastelowa czerwień (#ef4444 rozjaśniona)
+  incomeSet->setColor(
+      QColor("#4ade80")); // pastelowa zieleń (#22c55e rozjaśniona)
+  expenseSet->setColor(
+      QColor("#f87171")); // pastelowa czerwień (#ef4444 rozjaśniona)
   // Etykiety tooltipów w legendzie
   incomeSet->setBorderColor(QColor("#22c55e"));
   expenseSet->setBorderColor(QColor("#ef4444"));
@@ -1080,7 +1091,6 @@ void MainWindow::updateBarChart() {
 
   chart->legend()->setLabelColor(QColor("#94a3b8"));
 }
-
 
 // ═══════════════════════════════════════════════════════════════════════════════
 //  Budżetowanie kopertowe — dynamiczne, z categoryLimits z Wallet
@@ -1132,11 +1142,11 @@ void MainWindow::updateEnvelopeBudgets() {
 
   // Kolory zależne od aktywnego motywu
   bool isDark = ThemeManager::instance()->isDark();
-  QString cardBg     = isDark ? "#1e293b" : "#F8F9FA";
+  QString cardBg = isDark ? "#1e293b" : "#F8F9FA";
   QString cardBorder = isDark ? "#334155" : "#E9ECEF";
-  QString nameColor  = isDark ? "#e2e8f0" : "#1A1A1A";
-  QString amtColor   = isDark ? "#94a3b8" : "#6C757D";
-  QString barBg      = isDark ? "#0f172a" : "#DEE2E6";
+  QString nameColor = isDark ? "#e2e8f0" : "#1A1A1A";
+  QString amtColor = isDark ? "#94a3b8" : "#6C757D";
+  QString barBg = isDark ? "#0f172a" : "#DEE2E6";
 
   // Rysuj karty w siatce (max 4 per wiersz)
   QGridLayout *grid = new QGridLayout();
@@ -1159,12 +1169,14 @@ void MainWindow::updateEnvelopeBudgets() {
             border: 1px solid %2;
             border-radius: 10px;
         )")
-        .arg(cardBg).arg(cardBorder));
+                            .arg(cardBg)
+                            .arg(cardBorder));
 
     // Czysta nazwa kategorii — bez emotikon
     QLabel *nameLabel = new QLabel(cat);
     nameLabel->setStyleSheet(
-        QString("color: %1; font-weight: bold; font-size: 13px;").arg(nameColor));
+        QString("color: %1; font-weight: bold; font-size: 13px;")
+            .arg(nameColor));
 
     QLabel *amtLabel = new QLabel(
         QString("%1 / %2 PLN").arg(spentV, 0, 'f', 0).arg(limit, 0, 'f', 0));
@@ -1191,7 +1203,8 @@ void MainWindow::updateEnvelopeBudgets() {
                 border-radius: 4px;
             }
         )")
-        .arg(barBg).arg(barColor));
+                           .arg(barBg)
+                           .arg(barColor));
 
     QLabel *pctLabel = new QLabel(QString("%1%").arg(pct));
     pctLabel->setStyleSheet(
@@ -1264,25 +1277,26 @@ void MainWindow::refreshAccountsTab() {
 
     // Kolory zależne od motywu i salda
     bool isDark = ThemeManager::instance()->isDark();
-    QString accCardBg     = isDark ? "#1e293b" : "#F8F9FA";
-    QString accCardBorder = (balance >= 0)
-        ? (isDark ? "#1a4f9f" : "#BFD8FF")
-        : (isDark ? "#7f1d1d" : "#FFBFC0");
+    QString accCardBg = isDark ? "#1e293b" : "#F8F9FA";
+    QString accCardBorder = (balance >= 0) ? (isDark ? "#1a4f9f" : "#BFD8FF")
+                                           : (isDark ? "#7f1d1d" : "#FFBFC0");
     QString accTitleColor = isDark ? "#e2e8f0" : "#1A1A1A";
-    QString shareColor    = isDark ? "#64748b" : "#6C757D";
-    QString shareBarBg    = isDark ? "#0f172a" : "#DEE2E6";
+    QString shareColor = isDark ? "#64748b" : "#6C757D";
+    QString shareBarBg = isDark ? "#0f172a" : "#DEE2E6";
 
     card->setStyleSheet(QString(R"(
             background: %1;
             border: 1px solid %2;
             border-radius: 12px;
         )")
-        .arg(accCardBg).arg(accCardBorder));
+                            .arg(accCardBg)
+                            .arg(accCardBorder));
 
     // Nagłówek: nazwa konta (bez emotikon)
     QLabel *titleLabel = new QLabel(accName);
     titleLabel->setStyleSheet(
-        QString("color: %1; font-size: 14px; font-weight: bold;").arg(accTitleColor));
+        QString("color: %1; font-size: 14px; font-weight: bold;")
+            .arg(accTitleColor));
 
     // Kwota
     QString balStr = QString("%1 PLN").arg(balance, 0, 'f', 2);
@@ -1317,7 +1331,7 @@ void MainWindow::refreshAccountsTab() {
                     border-radius: 3px;
                 }
             )")
-          .arg(shareBarBg));
+                                  .arg(shareBarBg));
 
       cardLayout->addWidget(titleLabel);
       cardLayout->addWidget(balLabel);
@@ -1390,24 +1404,25 @@ void MainWindow::refreshGoalsTab() {
     cardLayout->setSpacing(6);
 
     bool isDarkG = ThemeManager::instance()->isDark();
-    QString goalCardBg     = isDarkG ? "#1e293b" : "#F8F9FA";
+    QString goalCardBg = isDarkG ? "#1e293b" : "#F8F9FA";
     QString goalCardBorder = isDarkG ? "#334155" : "#E9ECEF";
-    QString goalNameColor  = isDarkG ? "#e2e8f0" : "#1A1A1A";
-    QString goalAmtColor   = isDarkG ? "#64748b" : "#6C757D";
-    QString goalBarBg      = isDarkG ? "#0f172a" : "#DEE2E6";
+    QString goalNameColor = isDarkG ? "#e2e8f0" : "#1A1A1A";
+    QString goalAmtColor = isDarkG ? "#64748b" : "#6C757D";
+    QString goalBarBg = isDarkG ? "#0f172a" : "#DEE2E6";
 
     card->setStyleSheet(QString(R"(
             background: %1;
             border: 1px solid %2;
             border-radius: 10px;
         )")
-        .arg(goalCardBg).arg(goalCardBorder));
+                            .arg(goalCardBg)
+                            .arg(goalCardBorder));
 
     QHBoxLayout *headerRow = new QHBoxLayout();
-    QLabel *nameLabel =
-        new QLabel(QString::fromStdString(g.name));
+    QLabel *nameLabel = new QLabel(QString::fromStdString(g.name));
     nameLabel->setStyleSheet(
-        QString("color: %1; font-size: 14px; font-weight: bold;").arg(goalNameColor));
+        QString("color: %1; font-size: 14px; font-weight: bold;")
+            .arg(goalNameColor));
 
     QLabel *pctLabel = new QLabel(QString("%1%").arg(pct));
     pctLabel->setStyleSheet(
@@ -1443,9 +1458,9 @@ void MainWindow::refreshGoalsTab() {
                 border-radius: 6px;
             }
         )")
-        .arg(goalBarBg)
-        .arg(barColor)
-        .arg(pct >= 100 ? "#06d6a0" : "#38bdf8"));
+                           .arg(goalBarBg)
+                           .arg(barColor)
+                           .arg(pct >= 100 ? "#06d6a0" : "#38bdf8"));
     cardLayout->addWidget(bar);
 
     if (pct >= 100) {
@@ -1468,7 +1483,6 @@ void MainWindow::refreshGoalsTab() {
   goalsLayout->addWidget(gridWrapper);
   goalsLayout->addStretch();
 }
-
 
 // ═══════════════════════════════════════════════════════════════════════════════
 //  Wyszukiwarka
@@ -1623,15 +1637,15 @@ void MainWindow::refreshTable() {
         i, 1, new QTableWidgetItem(QString::fromStdString(t->getCategory())));
 
     // Typ transakcji — Transfer wyświetlamy neutralnie
-    bool isIncome    = (dynamic_cast<Income *>(t.get()) != nullptr);
-    bool isTransfer  = (dynamic_cast<Transfer *>(t.get()) != nullptr);
-    QString typeStr  = isTransfer ? "Transfer"
-                     : isIncome  ? "Przychód"
+    bool isIncome = (dynamic_cast<Income *>(t.get()) != nullptr);
+    bool isTransfer = (dynamic_cast<Transfer *>(t.get()) != nullptr);
+    QString typeStr = isTransfer ? "Transfer"
+                      : isIncome ? "Przychód"
                                  : "Wydatek";
     auto *typeItem = new QTableWidgetItem(typeStr);
     QColor typeColor = isTransfer ? QColor("#38bdf8")
-                     : isIncome  ? QColor("#22c55e")
-                                 : QColor("#ef4444");
+                       : isIncome ? QColor("#22c55e")
+                                  : QColor("#ef4444");
     typeItem->setForeground(typeColor);
     historyTable->setItem(i, 2, typeItem);
 
