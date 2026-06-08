@@ -197,12 +197,10 @@ WelcomeWindow::WelcomeWindow(QWidget* parent)
     connect(createButton,  &QPushButton::clicked, this, &WelcomeWindow::onCreateWalletClicked);
     connect(passwordInput, &QLineEdit::returnPressed, this, &WelcomeWindow::onLoginClicked);
 
-    // Przycisk motywu
     connect(themeToggleBtn, &QPushButton::clicked, this, [this]() {
         ThemeManager::instance()->toggleTheme();
     });
 
-    // Reaguj na zmianę motywu (aktualizuj etykietę + odmaluj gradient)
     connect(ThemeManager::instance(), &ThemeManager::themeChanged,
             this, &WelcomeWindow::onThemeChanged);
 }
@@ -228,12 +226,9 @@ void WelcomeWindow::paintEvent(QPaintEvent* event) {
 
 // ─── Reakcja na zmianę motywu ───────────────────────────────────────────────
 void WelcomeWindow::onThemeChanged(bool isDark) {
-    // Zaktualizuj etykietę przycisku
     themeToggleBtn->setText(ThemeManager::instance()->toggleButtonLabel());
-    // Odmaluj gradient tła
     update();
 
-    // Dostosuj kolor ikony do motywu
     if (m_iconLabel) {
         m_iconLabel->setStyleSheet(
             isDark ? "background: transparent; color: white;"

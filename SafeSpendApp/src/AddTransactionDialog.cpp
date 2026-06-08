@@ -3,7 +3,6 @@
 #include <QDialogButtonBox>
 #include <QVBoxLayout>
 
-// Konta dostępne w całej aplikacji
 static const QStringList ALL_ACCOUNTS = {
     "Gotówka", "Konto bankowe", "Karta kredytowa", "Oszczędności"
 };
@@ -107,7 +106,7 @@ AddTransactionDialog::AddTransactionDialog(QWidget* parent) : QDialog(parent) {
     for (const QString& acc : ALL_ACCOUNTS)
         toAccountComboBox->addItem(acc);
     if (toAccountComboBox->count() > 1)
-        toAccountComboBox->setCurrentIndex(1); // domyślnie inne niż fromAccount
+        toAccountComboBox->setCurrentIndex(1);
     formLayout->addRow(toAccountLabel, toAccountComboBox);
 
     // ── Przyciski OK / Anuluj ─────────────────────────────────────────────────
@@ -122,14 +121,12 @@ AddTransactionDialog::AddTransactionDialog(QWidget* parent) : QDialog(parent) {
     connect(typeComboBox, &QComboBox::currentTextChanged,
             this, &AddTransactionDialog::updateFieldVisibility);
 
-    // Inicjalizacja — pokaż pola dla Wydatku (domyślny)
     updateFieldVisibility(typeComboBox->currentText());
 }
 
 void AddTransactionDialog::updateFieldVisibility(const QString& type) {
     bool isTransfer = (type == "Transfer");
 
-    // Pola Income/Expense
     categoryLabel->setVisible(!isTransfer);
     categoryLineEdit->setVisible(!isTransfer);
     accountLabel->setVisible(!isTransfer);
@@ -137,13 +134,11 @@ void AddTransactionDialog::updateFieldVisibility(const QString& type) {
     recurringLabel->setVisible(!isTransfer);
     recurringCheckBox->setVisible(!isTransfer);
 
-    // Pola Transfer
     fromAccountLabel->setVisible(isTransfer);
     fromAccountComboBox->setVisible(isTransfer);
     toAccountLabel->setVisible(isTransfer);
     toAccountComboBox->setVisible(isTransfer);
 
-    // Dostosuj rozmiar okna
     adjustSize();
 }
 

@@ -42,7 +42,6 @@ std::map<std::string, double> Wallet::getAccountBalances() const {
         } else if (dynamic_cast<Expense*>(t.get())) {
             balances[t->getAccountName()] -= t->getAmount();
         } else if (auto* tr = dynamic_cast<Transfer*>(t.get())) {
-            // Transfer: odejmuje z konta źródłowego, dodaje do docelowego
             balances[tr->getFromAccount()] -= tr->getAmount();
             balances[tr->getToAccount()]   += tr->getAmount();
         }

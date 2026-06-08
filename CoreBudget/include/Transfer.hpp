@@ -20,10 +20,10 @@ public:
              const std::string& date);
 
     double      getAmount()      const override;
-    std::string getCategory()    const override; // zwraca "Transfer"
+    std::string getCategory()    const override;
     std::string getDate()        const override;
-    bool        isRecurring()    const override; // zawsze false
-    std::string getAccountName() const override; // zwraca fromAccount
+    bool        isRecurring()    const override;
+    std::string getAccountName() const override;
 
     // Dodatkowe akcesory specyficzne dla Transfer
     std::string getFromAccount() const;

@@ -50,7 +50,6 @@ void DatabaseManager::saveWallet(const Wallet& wallet,
 {
     std::vector<char> buffer;
 
-    // Lambda: pakuje string (rozmiar + znaki)
     auto appendString = [&buffer](const std::string& str) {
         size_t length = str.size();
         const char* lengthPtr = reinterpret_cast<const char*>(&length);
@@ -59,13 +58,11 @@ void DatabaseManager::saveWallet(const Wallet& wallet,
             buffer.insert(buffer.end(), str.data(), str.data() + length);
     };
 
-    // Lambda: pakuje double
     auto appendDouble = [&buffer](double val) {
         const char* ptr = reinterpret_cast<const char*>(&val);
         buffer.insert(buffer.end(), ptr, ptr + sizeof(double));
     };
 
-    // Lambda: pakuje size_t
     auto appendSizeT = [&buffer](size_t val) {
         const char* ptr = reinterpret_cast<const char*>(&val);
         buffer.insert(buffer.end(), ptr, ptr + sizeof(size_t));
@@ -93,7 +90,6 @@ void DatabaseManager::saveWallet(const Wallet& wallet,
             appendString(expense->accountName);
         }
         else if (auto transfer = dynamic_cast<Transfer*>(t.get())) {
-            // v5: nowy typ 'T'
             buffer.push_back('T');
             appendDouble(transfer->amount);
             appendString(transfer->fromAccount);
@@ -156,7 +152,6 @@ void DatabaseManager::loadWallet(Wallet& wallet,
 
     size_t index = 0;
 
-    // Lambda: czyta string (rozmiar + znaki)
     auto readString = [&buffer, &index, size]() -> std::string {
         if (index + sizeof(size_t) > static_cast<size_t>(size))
             throw DatabaseException("Bledne haslo lub plik uszkodzony (rozmiar tekstu).");
@@ -171,7 +166,6 @@ void DatabaseManager::loadWallet(Wallet& wallet,
         return str;
     };
 
-    // Lambda: czyta double
     auto readDouble = [&buffer, &index, size]() -> double {
         if (index + sizeof(double) > static_cast<size_t>(size))
             throw DatabaseException("Plik uszkodzony (odczyt double).");
@@ -181,7 +175,6 @@ void DatabaseManager::loadWallet(Wallet& wallet,
         return val;
     };
 
-    // Lambda: czyta size_t
     auto readSizeT = [&buffer, &index, size]() -> size_t {
         if (index + sizeof(size_t) > static_cast<size_t>(size))
             throw DatabaseException("Plik uszkodzony (odczyt size_t).");
@@ -203,7 +196,6 @@ void DatabaseManager::loadWallet(Wallet& wallet,
         char type = buffer[index++];
 
         if (type == 'T') {
-            // v5: Transfer — brak pola recurring
             double amount      = readDouble();
             std::string fromAcc = readString();
             std::string toAcc   = readString();
@@ -211,7 +203,6 @@ void DatabaseManager::loadWallet(Wallet& wallet,
             wallet.addTransaction(
                 std::make_unique<Transfer>(amount, fromAcc, toAcc, date));
         } else {
-            // Income / Expense — format v1–v4 bez zmian
             double amount       = readDouble();
             std::string cat     = readString();
             std::string date    = readString();

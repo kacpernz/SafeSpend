@@ -27,7 +27,7 @@ class MainWindow : public QMainWindow {
 private:
     // ── Dane ─────────────────────────────────────────────────────────────────
     Wallet      wallet;
-    std::string m_savePassword;   // hasło do auto-zapisu (ustawiane przy logowaniu)
+    std::string m_savePassword;
 
     // ── Zakładki ──────────────────────────────────────────────────────────────
     QTabWidget*    tabWidget;
@@ -74,7 +74,7 @@ private:
     void refreshGoalsTab();
     QPushButton* makeButton(const QString& text, const QString& color);
     void refreshAll();
-    void autoSave();              // Cel 1: cichy zapis w tle
+    void autoSave();
 
 private slots:
     void onThemeChanged(bool isDark);
