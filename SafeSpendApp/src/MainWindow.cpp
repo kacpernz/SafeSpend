@@ -164,17 +164,7 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent) {
   searchBar->setPlaceholderText(
       "🔍  Szukaj transakcji (data, kategoria, kwota)...");
   searchBar->setFixedHeight(40);
-  searchBar->setStyleSheet(R"(
-        QLineEdit {
-            background-color: #1e293b;
-            color: #f0f0f0;
-            border: 1px solid #334155;
-            border-radius: 8px;
-            padding: 0 14px;
-            font-size: 13px;
-        }
-        QLineEdit:focus { border: 1px solid #3d8bfd; }
-    )");
+  // Styl zarządzany globalnie przez ThemeManager
   layout1->addWidget(searchBar);
 
   // ── Etykieta salda ────────────────────────────────────────────────────────
@@ -194,27 +184,7 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent) {
   historyTable->setEditTriggers(QAbstractItemView::NoEditTriggers);
   historyTable->setAlternatingRowColors(true);
   historyTable->setSelectionBehavior(QAbstractItemView::SelectRows);
-  historyTable->setStyleSheet(R"(
-        QTableWidget {
-            background-color: #1e293b;
-            alternate-background-color: #243044;
-            color: #e2e8f0;
-            gridline-color: #334155;
-            border: none;
-            border-radius: 6px;
-        }
-        QTableWidget::item:selected {
-            background-color: #1a4f9f;
-        }
-        QHeaderView::section {
-            background-color: #0f172a;
-            color: #94a3b8;
-            font-weight: bold;
-            padding: 6px;
-            border: none;
-            border-bottom: 1px solid #334155;
-        }
-    )");
+  // Styl tabeli zarządzany globalnie przez ThemeManager
   layout1->addWidget(historyTable);
 
   // ── Pasek budżetu miesięcznego ────────────────────────────────────────────
@@ -230,21 +200,7 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent) {
   budgetBar->setFixedHeight(22);
   budgetBar->setTextVisible(true);
   budgetBar->setFormat("0 / 5000 PLN  (0%)");  // zostanie nadpisane przez updateBudgetBar()
-  budgetBar->setStyleSheet(R"(
-        QProgressBar {
-            background-color: #1e293b;
-            border: 1px solid #334155;
-            border-radius: 6px;
-            text-align: center;
-            color: white;
-            font-size: 12px;
-        }
-        QProgressBar::chunk {
-            background: qlineargradient(x1:0, y1:0, x2:1, y2:0,
-                stop:0 #1a6fdb, stop:1 #0d6efd);
-            border-radius: 6px;
-        }
-    )");
+  // Styl paska budżetu zarządzany przez updateBudgetBar() z uwzględnieniem motywu
   layout1->addWidget(budgetBar);
 
   // ── Przyciski akcji ───────────────────────────────────────────────────────
@@ -384,16 +340,10 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent) {
 
   goalsScrollArea = new QScrollArea(tab3);
   goalsScrollArea->setWidgetResizable(true);
-  goalsScrollArea->setStyleSheet(R"(
-        QScrollArea { background: #111827; border: none; }
-        QScrollBar:vertical {
-            background: #1e293b; width: 8px; border-radius: 4px;
-        }
-        QScrollBar::handle:vertical { background: #334155; border-radius: 4px; }
-    )");
+  // Styl scroll area zarządzany przez ThemeManager
 
   goalsContainer = new QWidget();
-  goalsContainer->setStyleSheet("background: #111827;");
+  goalsContainer->setObjectName("goalsContainer");
   goalsLayout = new QVBoxLayout(goalsContainer);
   goalsLayout->setContentsMargins(8, 8, 8, 8);
   goalsLayout->setSpacing(10);
@@ -425,16 +375,10 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent) {
 
   QScrollArea *accountsScroll = new QScrollArea(tab4);
   accountsScroll->setWidgetResizable(true);
-  accountsScroll->setStyleSheet(R"(
-        QScrollArea { background: #111827; border: none; }
-        QScrollBar:vertical {
-            background: #1e293b; width: 8px; border-radius: 4px;
-        }
-        QScrollBar::handle:vertical { background: #334155; border-radius: 4px; }
-    )");
+  // Styl scroll area zarządzany przez ThemeManager
 
   accountsWidget = new QWidget();
-  accountsWidget->setStyleSheet("background: #111827;");
+  accountsWidget->setObjectName("accountsWidget");
   accountsLayout = new QVBoxLayout(accountsWidget);
   accountsLayout->setContentsMargins(4, 4, 4, 4);
   accountsLayout->setSpacing(10);
@@ -615,7 +559,7 @@ void MainWindow::onThemeChanged(bool isDark) {
   barChart->setTheme(chartTheme);
 
   // 3. Zaktualizuj tła ChartView
-  QString chartBg = isDark ? "#111827" : "#f1f5f9";
+  QString chartBg = isDark ? "#111827" : "#FFFFFF";
   chartView->setStyleSheet(
       QString("background: %1; border: none;").arg(chartBg));
   barChartView->setStyleSheet(
@@ -623,8 +567,8 @@ void MainWindow::onThemeChanged(bool isDark) {
 
   // 4. Zaktualizuj styl toolbara (ma własne QSS poza globalnym arkuszem)
   if (QWidget *tb = qobject_cast<QWidget *>(themeToggleBtn->parent())) {
-    QString tbBg = isDark ? "#0f172a" : "#e2e8f0";
-    QString tbBorder = isDark ? "#1e293b" : "#cbd5e1";
+    QString tbBg     = isDark ? "#0f172a" : "#FFFFFF";
+    QString tbBorder = isDark ? "#1e293b" : "#E9ECEF";
     tb->setStyleSheet(QString("background: %1; border-bottom: 1px solid %2;")
                           .arg(tbBg)
                           .arg(tbBorder));
@@ -644,18 +588,22 @@ void MainWindow::onThemeChanged(bool isDark) {
   } else {
     themeToggleBtn->setStyleSheet(R"(
             QPushButton {
-                background: rgba(0,0,0,0.06); color: #475569;
-                border: 1px solid rgba(0,0,0,0.15); border-radius: 8px;
+                background: rgba(0,0,0,0.06); color: #495057;
+                border: 1px solid rgba(0,0,0,0.12); border-radius: 8px;
                 font-size: 12px; font-weight: bold; padding: 0 14px;
             }
-            QPushButton:hover  { background: rgba(0,0,0,0.12); color: #1e293b; }
-            QPushButton:pressed{ background: rgba(0,0,0,0.20); }
+            QPushButton:hover  { background: rgba(0,0,0,0.10); color: #1A1A1A; }
+            QPushButton:pressed{ background: rgba(0,0,0,0.18); }
         )");
   }
 
-  // 6. Przerysuj dane wykresów z nowym motywem
+  // 6. Przerysuj wszystkie sekcje z nowym motywem
   updateChart();
   updateBarChart();
+  updateBudgetBar();
+  refreshGoalsTab();
+  refreshAccountsTab();
+  updateEnvelopeBudgets();
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -963,39 +911,46 @@ void MainWindow::updateBudgetBar() {
                            .arg(budgetLimit, 0, 'f', 0)
                            .arg(percent));
 
+  bool isDark = ThemeManager::instance()->isDark();
+  QString barBg     = isDark ? "#1e293b" : "#E9ECEF";
+  QString barText   = isDark ? "white"   : "#1A1A1A";
+
   if (percent >= 90) {
-    budgetBar->setStyleSheet(R"(
+    budgetBar->setStyleSheet(QString(R"(
             QProgressBar {
-                background-color: #1e293b; border: 1px solid #7f1d1d;
-                border-radius: 6px; text-align: center; color: white; font-size: 12px;
+                background-color: %1; border: 1px solid #7f1d1d;
+                border-radius: 6px; text-align: center; color: %2; font-size: 12px;
             }
             QProgressBar::chunk {
                 background: qlineargradient(x1:0, y1:0, x2:1, y2:0,
                     stop:0 #b91c1c, stop:1 #ef4444); border-radius: 6px;
             }
-        )");
+        )")
+        .arg(barBg).arg(barText));
   } else if (percent >= 70) {
-    budgetBar->setStyleSheet(R"(
+    budgetBar->setStyleSheet(QString(R"(
             QProgressBar {
-                background-color: #1e293b; border: 1px solid #78350f;
-                border-radius: 6px; text-align: center; color: white; font-size: 12px;
+                background-color: %1; border: 1px solid #78350f;
+                border-radius: 6px; text-align: center; color: %2; font-size: 12px;
             }
             QProgressBar::chunk {
                 background: qlineargradient(x1:0, y1:0, x2:1, y2:0,
                     stop:0 #b45309, stop:1 #f59e0b); border-radius: 6px;
             }
-        )");
+        )")
+        .arg(barBg).arg(barText));
   } else {
-    budgetBar->setStyleSheet(R"(
+    budgetBar->setStyleSheet(QString(R"(
             QProgressBar {
-                background-color: #1e293b; border: 1px solid #334155;
-                border-radius: 6px; text-align: center; color: white; font-size: 12px;
+                background-color: %1; border: 1px solid #334155;
+                border-radius: 6px; text-align: center; color: %2; font-size: 12px;
             }
             QProgressBar::chunk {
                 background: qlineargradient(x1:0, y1:0, x2:1, y2:0,
                     stop:0 #1a6fdb, stop:1 #0d6efd); border-radius: 6px;
             }
-        )");
+        )")
+        .arg(barBg).arg(barText));
   }
 }
 
@@ -1175,12 +1130,13 @@ void MainWindow::updateEnvelopeBudgets() {
     }
   }
 
-  // Domyślne ikony dla znanych kategorii
-  static const QMap<QString, QString> icons = {
-      {"Jedzenie", "🍕"}, {"Rata", "🏠"},   {"Transport", "🚗"},
-      {"Rozrywka", "🎮"}, {"Zakupy", "🛍"},  {"Zdrowie", "💊"},
-      {"Edukacja", "📚"}, {"Podróże", "✈"}, {"Sport", "⚽"},
-  };
+  // Kolory zależne od aktywnego motywu
+  bool isDark = ThemeManager::instance()->isDark();
+  QString cardBg     = isDark ? "#1e293b" : "#F8F9FA";
+  QString cardBorder = isDark ? "#334155" : "#E9ECEF";
+  QString nameColor  = isDark ? "#e2e8f0" : "#1A1A1A";
+  QString amtColor   = isDark ? "#94a3b8" : "#6C757D";
+  QString barBg      = isDark ? "#0f172a" : "#DEE2E6";
 
   // Rysuj karty w siatce (max 4 per wiersz)
   QGridLayout *grid = new QGridLayout();
@@ -1198,20 +1154,22 @@ void MainWindow::updateEnvelopeBudgets() {
     QVBoxLayout *cardLayout = new QVBoxLayout(card);
     cardLayout->setContentsMargins(14, 12, 14, 12);
     cardLayout->setSpacing(5);
-    card->setStyleSheet(R"(
-            background: #1e293b;
-            border: 1px solid #334155;
+    card->setStyleSheet(QString(R"(
+            background: %1;
+            border: 1px solid %2;
             border-radius: 10px;
-        )");
+        )")
+        .arg(cardBg).arg(cardBorder));
 
-    QString icon = icons.value(cat, "📂");
-    QLabel *nameLabel = new QLabel(QString("%1  %2").arg(icon).arg(cat));
+    // Czysta nazwa kategorii — bez emotikon
+    QLabel *nameLabel = new QLabel(cat);
     nameLabel->setStyleSheet(
-        "color: #e2e8f0; font-weight: bold; font-size: 13px;");
+        QString("color: %1; font-weight: bold; font-size: 13px;").arg(nameColor));
 
     QLabel *amtLabel = new QLabel(
         QString("%1 / %2 PLN").arg(spentV, 0, 'f', 0).arg(limit, 0, 'f', 0));
-    amtLabel->setStyleSheet("color: #94a3b8; font-size: 12px;");
+    amtLabel->setStyleSheet(
+        QString("color: %1; font-size: 12px;").arg(amtColor));
 
     QProgressBar *bar = new QProgressBar();
     bar->setRange(0, 100);
@@ -1224,16 +1182,16 @@ void MainWindow::updateEnvelopeBudgets() {
                                      : "#22c55e";
     bar->setStyleSheet(QString(R"(
             QProgressBar {
-                background-color: #0f172a;
+                background-color: %1;
                 border: none;
                 border-radius: 4px;
             }
             QProgressBar::chunk {
-                background-color: %1;
+                background-color: %2;
                 border-radius: 4px;
             }
         )")
-                           .arg(barColor));
+        .arg(barBg).arg(barColor));
 
     QLabel *pctLabel = new QLabel(QString("%1%").arg(pct));
     pctLabel->setStyleSheet(
@@ -1284,14 +1242,6 @@ void MainWindow::refreshAccountsTab() {
     return;
   }
 
-  // Ikony dla znanych kont
-  static const QMap<QString, QString> accountIcons = {
-      {"Gotówka", "💵"},
-      {"Konto bankowe", "🏦"},
-      {"Karta kredytowa", "💳"},
-      {"Oszczędności", "🐷"},
-  };
-
   // Oblicz łączne saldo (do wykreślenia udziałów)
   double totalPositive = 0.0;
   for (const auto &kv : balances)
@@ -1312,20 +1262,27 @@ void MainWindow::refreshAccountsTab() {
     cardLayout->setContentsMargins(18, 16, 18, 16);
     cardLayout->setSpacing(6);
 
-    // Kolor karty zależy od salda
-    QString cardBorder = (balance >= 0) ? "#1a4f9f" : "#7f1d1d";
+    // Kolory zależne od motywu i salda
+    bool isDark = ThemeManager::instance()->isDark();
+    QString accCardBg     = isDark ? "#1e293b" : "#F8F9FA";
+    QString accCardBorder = (balance >= 0)
+        ? (isDark ? "#1a4f9f" : "#BFD8FF")
+        : (isDark ? "#7f1d1d" : "#FFBFC0");
+    QString accTitleColor = isDark ? "#e2e8f0" : "#1A1A1A";
+    QString shareColor    = isDark ? "#64748b" : "#6C757D";
+    QString shareBarBg    = isDark ? "#0f172a" : "#DEE2E6";
+
     card->setStyleSheet(QString(R"(
-            background: #1e293b;
-            border: 1px solid %1;
+            background: %1;
+            border: 1px solid %2;
             border-radius: 12px;
         )")
-                            .arg(cardBorder));
+        .arg(accCardBg).arg(accCardBorder));
 
-    // Nagłówek: ikona + nazwa konta
-    QString icon = accountIcons.value(accName, "🏧");
-    QLabel *titleLabel = new QLabel(QString("%1  %2").arg(icon).arg(accName));
+    // Nagłówek: nazwa konta (bez emotikon)
+    QLabel *titleLabel = new QLabel(accName);
     titleLabel->setStyleSheet(
-        "color: #e2e8f0; font-size: 14px; font-weight: bold;");
+        QString("color: %1; font-size: 14px; font-weight: bold;").arg(accTitleColor));
 
     // Kwota
     QString balStr = QString("%1 PLN").arg(balance, 0, 'f', 2);
@@ -1342,23 +1299,25 @@ void MainWindow::refreshAccountsTab() {
       int share = static_cast<int>(balance / totalPositive * 100.0);
       QLabel *shareLabel =
           new QLabel(QString("Udział w łącznym saldo: %1%").arg(share));
-      shareLabel->setStyleSheet("color: #64748b; font-size: 11px;");
+      shareLabel->setStyleSheet(
+          QString("color: %1; font-size: 11px;").arg(shareColor));
 
       QProgressBar *shareBar = new QProgressBar();
       shareBar->setRange(0, 100);
       shareBar->setValue(share);
       shareBar->setFixedHeight(8);
       shareBar->setTextVisible(false);
-      shareBar->setStyleSheet(R"(
+      shareBar->setStyleSheet(QString(R"(
                 QProgressBar {
-                    background-color: #0f172a; border: none; border-radius: 3px;
+                    background-color: %1; border: none; border-radius: 3px;
                 }
                 QProgressBar::chunk {
                     background: qlineargradient(x1:0, y1:0, x2:1, y2:0,
                         stop:0 #1a6fdb, stop:1 #38bdf8);
                     border-radius: 3px;
                 }
-            )");
+            )")
+          .arg(shareBarBg));
 
       cardLayout->addWidget(titleLabel);
       cardLayout->addWidget(balLabel);
@@ -1429,17 +1388,26 @@ void MainWindow::refreshGoalsTab() {
     QVBoxLayout *cardLayout = new QVBoxLayout(card);
     cardLayout->setContentsMargins(16, 12, 16, 12);
     cardLayout->setSpacing(6);
-    card->setStyleSheet(R"(
-            background: #1e293b;
-            border: 1px solid #334155;
+
+    bool isDarkG = ThemeManager::instance()->isDark();
+    QString goalCardBg     = isDarkG ? "#1e293b" : "#F8F9FA";
+    QString goalCardBorder = isDarkG ? "#334155" : "#E9ECEF";
+    QString goalNameColor  = isDarkG ? "#e2e8f0" : "#1A1A1A";
+    QString goalAmtColor   = isDarkG ? "#64748b" : "#6C757D";
+    QString goalBarBg      = isDarkG ? "#0f172a" : "#DEE2E6";
+
+    card->setStyleSheet(QString(R"(
+            background: %1;
+            border: 1px solid %2;
             border-radius: 10px;
-        )");
+        )")
+        .arg(goalCardBg).arg(goalCardBorder));
 
     QHBoxLayout *headerRow = new QHBoxLayout();
     QLabel *nameLabel =
-        new QLabel(QString("🎯  %1").arg(QString::fromStdString(g.name)));
+        new QLabel(QString::fromStdString(g.name));
     nameLabel->setStyleSheet(
-        "color: #e2e8f0; font-size: 14px; font-weight: bold;");
+        QString("color: %1; font-size: 14px; font-weight: bold;").arg(goalNameColor));
 
     QLabel *pctLabel = new QLabel(QString("%1%").arg(pct));
     pctLabel->setStyleSheet(
@@ -1454,7 +1422,8 @@ void MainWindow::refreshGoalsTab() {
     QLabel *amtLabel = new QLabel(QString("%1 / %2 PLN zebrano")
                                       .arg(g.currentAmount, 0, 'f', 2)
                                       .arg(g.targetAmount, 0, 'f', 2));
-    amtLabel->setStyleSheet("color: #64748b; font-size: 12px;");
+    amtLabel->setStyleSheet(
+        QString("color: %1; font-size: 12px;").arg(goalAmtColor));
     cardLayout->addWidget(amtLabel);
 
     QProgressBar *bar = new QProgressBar();
@@ -1466,16 +1435,17 @@ void MainWindow::refreshGoalsTab() {
     QString barColor = (pct >= 100) ? "#22c55e" : "#0d6efd";
     bar->setStyleSheet(QString(R"(
             QProgressBar {
-                background-color: #0f172a; border: none; border-radius: 6px;
+                background-color: %1; border: none; border-radius: 6px;
             }
             QProgressBar::chunk {
                 background: qlineargradient(x1:0, y1:0, x2:1, y2:0,
-                    stop:0 %1, stop:1 %2);
+                    stop:0 %2, stop:1 %3);
                 border-radius: 6px;
             }
         )")
-                           .arg(barColor)
-                           .arg(pct >= 100 ? "#06d6a0" : "#38bdf8"));
+        .arg(goalBarBg)
+        .arg(barColor)
+        .arg(pct >= 100 ? "#06d6a0" : "#38bdf8"));
     cardLayout->addWidget(bar);
 
     if (pct >= 100) {
