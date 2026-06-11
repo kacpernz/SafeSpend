@@ -18,7 +18,7 @@
 #include <QFont>
 #include <QGraphicsDropShadowEffect>
 
-// ─── helper: shadow ───────────────────────────────────────────────────────────
+// === helper: shadow ===
 static void addShadow(QWidget* w, QColor color = QColor(0, 0, 0, 120), int blur = 18) {
     auto* effect = new QGraphicsDropShadowEffect(w);
     effect->setBlurRadius(blur);
@@ -27,7 +27,7 @@ static void addShadow(QWidget* w, QColor color = QColor(0, 0, 0, 120), int blur 
     w->setGraphicsEffect(effect);
 }
 
-// ─── constructor ─────────────────────────────────────────────────────────────
+// === constructor ===
 WelcomeWindow::WelcomeWindow(QWidget* parent)
     : QWidget(parent)
 {
@@ -35,12 +35,12 @@ WelcomeWindow::WelcomeWindow(QWidget* parent)
     setFixedSize(420, 540);
     setAttribute(Qt::WA_DeleteOnClose);
 
-    // ── root layout ──────────────────────────────────────────────────────────
+    // === root layout ===
     QVBoxLayout* root = new QVBoxLayout(this);
     root->setContentsMargins(48, 40, 48, 32);
     root->setSpacing(0);
 
-    // ── Przycisk motywu (prawy górny róg) ────────────────────────────────────
+    // === Przycisk motywu (prawy górny róg) ===
     QHBoxLayout* topBar = new QHBoxLayout();
     topBar->addStretch();
 
@@ -66,7 +66,7 @@ WelcomeWindow::WelcomeWindow(QWidget* parent)
     root->addLayout(topBar);
     root->addSpacing(8);
 
-    // ── icon label ────────────────────────────────────────────────────
+    // === icon label ===
     m_iconLabel = new QLabel("🔐", this);
     m_iconLabel->setAlignment(Qt::AlignHCenter);
     QFont iconFont = m_iconLabel->font();
@@ -76,7 +76,7 @@ WelcomeWindow::WelcomeWindow(QWidget* parent)
     root->addWidget(m_iconLabel);
     root->addSpacing(16);
 
-    // ── main title ────────────────────────────────────────────────────────────
+    // === main title ===
     QLabel* titleLabel = new QLabel("SafeSpend", this);
     titleLabel->setAlignment(Qt::AlignHCenter);
     QFont titleFont;
@@ -89,7 +89,7 @@ WelcomeWindow::WelcomeWindow(QWidget* parent)
     root->addWidget(titleLabel);
     root->addSpacing(6);
 
-    // ── subtitle ──────────────────────────────────────────────────────────────
+    // === subtitle ===
     QLabel* subtitleLabel = new QLabel("Twój bezpieczny portfel finansowy", this);
     subtitleLabel->setAlignment(Qt::AlignHCenter);
     QFont subFont;
@@ -100,7 +100,7 @@ WelcomeWindow::WelcomeWindow(QWidget* parent)
     root->addWidget(subtitleLabel);
     root->addSpacing(36);
 
-    // ── password input ────────────────────────────────────────────────────────
+    // === password input ===
     passwordInput = new QLineEdit(this);
     passwordInput->setEchoMode(QLineEdit::Password);
     passwordInput->setPlaceholderText("🔑  Wpisz hasło...");
@@ -122,7 +122,7 @@ WelcomeWindow::WelcomeWindow(QWidget* parent)
     root->addWidget(passwordInput);
     root->addSpacing(12);
 
-    // ── status label ─────────────────────────────────────────────────────────
+    // === status label ===
     statusLabel = new QLabel("", this);
     statusLabel->setAlignment(Qt::AlignHCenter);
     statusLabel->setWordWrap(true);
@@ -134,7 +134,7 @@ WelcomeWindow::WelcomeWindow(QWidget* parent)
     root->addWidget(statusLabel);
     root->addSpacing(4);
 
-    // ── login button ──────────────────────────────────────────────────────────
+    // === login button ===
     loginButton = new QPushButton("  Zaloguj do portfela", this);
     loginButton->setFixedHeight(50);
     loginButton->setCursor(Qt::PointingHandCursor);
@@ -159,7 +159,7 @@ WelcomeWindow::WelcomeWindow(QWidget* parent)
     root->addWidget(loginButton);
     root->addSpacing(12);
 
-    // ── create button ─────────────────────────────────────────────────────────
+    // === create button ===
     createButton = new QPushButton("  Utwórz nowy portfel", this);
     createButton->setFixedHeight(50);
     createButton->setCursor(Qt::PointingHandCursor);
@@ -183,7 +183,7 @@ WelcomeWindow::WelcomeWindow(QWidget* parent)
     root->addWidget(createButton);
     root->addStretch();
 
-    // ── footer ────────────────────────────────────────────────────────────────
+    // === footer ===
     QLabel* footerLabel = new QLabel("Dane szyfrowane algorytmem XOR", this);
     footerLabel->setAlignment(Qt::AlignHCenter);
     QFont footerFont;
@@ -192,7 +192,7 @@ WelcomeWindow::WelcomeWindow(QWidget* parent)
     footerLabel->setStyleSheet("background: transparent; color: #4a5568;");
     root->addWidget(footerLabel);
 
-    // ── connections ───────────────────────────────────────────────────────────
+    // === connections ===
     connect(loginButton,   &QPushButton::clicked, this, &WelcomeWindow::onLoginClicked);
     connect(createButton,  &QPushButton::clicked, this, &WelcomeWindow::onCreateWalletClicked);
     connect(passwordInput, &QLineEdit::returnPressed, this, &WelcomeWindow::onLoginClicked);
@@ -205,7 +205,7 @@ WelcomeWindow::WelcomeWindow(QWidget* parent)
             this, &WelcomeWindow::onThemeChanged);
 }
 
-// ─── gradient background — dostosowany do aktywnego motywu ───────────────────
+// === gradient background — dostosowany do aktywnego motywu ===
 void WelcomeWindow::paintEvent(QPaintEvent* event) {
     Q_UNUSED(event)
     QPainter painter(this);
@@ -224,7 +224,7 @@ void WelcomeWindow::paintEvent(QPaintEvent* event) {
     painter.fillRect(rect(), gradient);
 }
 
-// ─── Reakcja na zmianę motywu ───────────────────────────────────────────────
+// === Reakcja na zmianę motywu ===
 void WelcomeWindow::onThemeChanged(bool isDark) {
     themeToggleBtn->setText(ThemeManager::instance()->toggleButtonLabel());
     update();
@@ -236,7 +236,7 @@ void WelcomeWindow::onThemeChanged(bool isDark) {
     }
 }
 
-// ─── login slot ──────────────────────────────────────────────────────────────
+// === login slot ===
 void WelcomeWindow::onLoginClicked() {
     QString password = passwordInput->text();
     if (password.isEmpty()) {
@@ -262,7 +262,7 @@ void WelcomeWindow::onLoginClicked() {
     }
 }
 
-// ─── create new wallet slot ───────────────────────────────────────────────────
+// === create new wallet slot ===
 void WelcomeWindow::onCreateWalletClicked() {
     QString password = passwordInput->text();
     if (password.isEmpty()) {
@@ -302,7 +302,7 @@ void WelcomeWindow::onCreateWalletClicked() {
     launchMainWindow(std::move(emptyWallet), password);
 }
 
-// ─── launch MainWindow ────────────────────────────────────────────────────────
+// === launch MainWindow ===
 void WelcomeWindow::launchMainWindow(Wallet&& wallet, const QString& password) {
     MainWindow* mainWin = new MainWindow();
     mainWin->setAttribute(Qt::WA_DeleteOnClose);

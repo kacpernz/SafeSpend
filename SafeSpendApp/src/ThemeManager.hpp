@@ -2,11 +2,10 @@
 #include <QObject>
 #include <QString>
 
-// ─── ThemeManager ─────────────────────────────────────────────────────────────
+// === ThemeManager ===
 // Singleton zarządzający motywem wizualnym. Emituje themeChanged(bool isDark)
 // po każdym przełączeniu — widgety (MainWindow, WelcomeWindow) reagują m.in.
 // ręczną aktualizacją QChart::setTheme(), bo QSS nie sięga do QtCharts.
-// ─────────────────────────────────────────────────────────────────────────────
 
 class ThemeManager : public QObject {
     Q_OBJECT

@@ -4,7 +4,7 @@
 #include "Transfer.hpp"
 
 
-// ── Transakcje ────────────────────────────────────────────────────────────────
+// === Transakcje ===
 
 void Wallet::addTransaction(std::unique_ptr<ITransaction> transaction) {
     transactions.push_back(std::move(transaction));
@@ -32,7 +32,7 @@ void Wallet::clear() {
     categoryLimits.clear();
 }
 
-// ── Subkonta ──────────────────────────────────────────────────────────────────
+// === Subkonta ===
 
 std::map<std::string, double> Wallet::getAccountBalances() const {
     std::map<std::string, double> balances;
@@ -49,7 +49,7 @@ std::map<std::string, double> Wallet::getAccountBalances() const {
     return balances;
 }
 
-// ── Cele oszczędnościowe ──────────────────────────────────────────────────────
+// === Cele oszczędnościowe ===
 
 void Wallet::addGoal(const Goal& goal) {
     goals.push_back(goal);
@@ -70,7 +70,7 @@ std::vector<Goal>& Wallet::getGoalsMutable() {
     return goals;
 }
 
-// ── Limity kopertowe ──────────────────────────────────────────────────────────
+// === Limity kopertowe ===
 
 void Wallet::setCategoryLimit(const std::string& category, double limit) {
     if (limit <= 0.0)
@@ -87,7 +87,7 @@ const std::map<std::string, double>& Wallet::getCategoryLimits() const {
     return categoryLimits;
 }
 
-// ── Globalny limit budżetu miesięcznego ──────────────────────────────────────
+// === Globalny limit budżetu miesięcznego ===
 
 void Wallet::setMonthlyBudgetLimit(double limit) {
     if (limit > 0.0)

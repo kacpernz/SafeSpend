@@ -3,16 +3,14 @@
 #include <QDialogButtonBox>
 #include <QVBoxLayout>
 
-static const QStringList ALL_ACCOUNTS = {
-    "Gotówka", "Konto bankowe", "Karta kredytowa", "Oszczędności"
-};
+static const QStringList ALL_ACCOUNTS = {"Gotówka", "Konto bankowe", "Karta kredytowa", "Oszczędności"};
 
 AddTransactionDialog::AddTransactionDialog(QWidget* parent) : QDialog(parent) {
     setWindowTitle("Dodaj transakcję");
     resize(380, 280);
     setMinimumWidth(360);
 
-    // ── Styl dynamiczny (motyw) ───────────────────────────────────────────────
+    // === Styl dynamiczny (motyw) ===
     bool isDark = ThemeManager::instance()->isDark();
     QString bg      = isDark ? "#111827" : "#f8fafc";
     QString input   = isDark ? "#1e293b" : "#ffffff";
@@ -54,7 +52,7 @@ AddTransactionDialog::AddTransactionDialog(QWidget* parent) : QDialog(parent) {
         QDialogButtonBox QPushButton:hover { opacity: 0.85; }
     )").arg(bg).arg(text).arg(input).arg(text).arg(border).arg(accent).arg(subtext));
 
-    // ── Główny layout ─────────────────────────────────────────────────────────
+    // === Główny layout ===
     QVBoxLayout* mainLayout = new QVBoxLayout(this);
     mainLayout->setContentsMargins(20, 20, 20, 16);
     mainLayout->setSpacing(8);
@@ -64,21 +62,21 @@ AddTransactionDialog::AddTransactionDialog(QWidget* parent) : QDialog(parent) {
     formLayout->setLabelAlignment(Qt::AlignLeft | Qt::AlignVCenter);
     mainLayout->addLayout(formLayout);
 
-    // ── Typ transakcji ────────────────────────────────────────────────────────
+    // === Typ transakcji ===
     typeComboBox = new QComboBox(this);
     typeComboBox->addItem("Wydatek");
     typeComboBox->addItem("Przychod");
     typeComboBox->addItem("Transfer");
     formLayout->addRow("Typ:", typeComboBox);
 
-    // ── Kwota ─────────────────────────────────────────────────────────────────
+    // === Kwota ===
     amountSpinBox = new QDoubleSpinBox(this);
     amountSpinBox->setMaximum(1000000.0);
     amountSpinBox->setDecimals(2);
     amountSpinBox->setSuffix(" PLN");
     formLayout->addRow("Kwota:", amountSpinBox);
 
-    // ── Pola dla Income / Expense ─────────────────────────────────────────────
+    // === Pola dla Income / Expense ===
     categoryLabel    = new QLabel("Kategoria:", this);
     categoryLineEdit = new QLineEdit(this);
     categoryLineEdit->setPlaceholderText("np. Jedzenie, Rata, Wynagrodzenie...");
@@ -94,7 +92,7 @@ AddTransactionDialog::AddTransactionDialog(QWidget* parent) : QDialog(parent) {
     recurringCheckBox = new QCheckBox("Płatność co miesiąc", this);
     formLayout->addRow(recurringLabel, recurringCheckBox);
 
-    // ── Pola dla Transfer ─────────────────────────────────────────────────────
+    // === Pola dla Transfer ===
     fromAccountLabel   = new QLabel("Z konta:", this);
     fromAccountComboBox = new QComboBox(this);
     for (const QString& acc : ALL_ACCOUNTS)
@@ -109,7 +107,7 @@ AddTransactionDialog::AddTransactionDialog(QWidget* parent) : QDialog(parent) {
         toAccountComboBox->setCurrentIndex(1);
     formLayout->addRow(toAccountLabel, toAccountComboBox);
 
-    // ── Przyciski OK / Anuluj ─────────────────────────────────────────────────
+    // === Przyciski OK / Anuluj ===
     QDialogButtonBox* buttonBox =
         new QDialogButtonBox(QDialogButtonBox::Ok | QDialogButtonBox::Cancel, this);
     mainLayout->addWidget(buttonBox);
@@ -117,7 +115,7 @@ AddTransactionDialog::AddTransactionDialog(QWidget* parent) : QDialog(parent) {
     connect(buttonBox, &QDialogButtonBox::accepted, this, &QDialog::accept);
     connect(buttonBox, &QDialogButtonBox::rejected, this, &QDialog::reject);
 
-    // ── Dynamiczne przełączanie pól przy zmianie typu ─────────────────────────
+    // === Dynamiczne przełączanie pól przy zmianie typu ===
     connect(typeComboBox, &QComboBox::currentTextChanged,
             this, &AddTransactionDialog::updateFieldVisibility);
 

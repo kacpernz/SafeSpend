@@ -1,14 +1,7 @@
 #include "Transfer.hpp"
 
-Transfer::Transfer(double amount,
-                   const std::string& fromAccount,
-                   const std::string& toAccount,
-                   const std::string& date)
-    : amount(amount)
-    , fromAccount(fromAccount)
-    , toAccount(toAccount)
-    , date(date)
-{}
+Transfer::Transfer(double amount, const std::string& fromAccount, const std::string& toAccount, const std::string& date)
+    : amount(amount), fromAccount(fromAccount), toAccount(toAccount), date(date) {}
 
 double Transfer::getAmount() const {
     return amount;

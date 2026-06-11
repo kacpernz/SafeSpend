@@ -1,9 +1,7 @@
 #include "Expense.hpp"
 
-Expense::Expense(double amount, const std::string& category, const std::string& date,
-                 bool recurring, const std::string& accountName)
-    : amount(amount), category(category), date(date), recurring(recurring),
-      accountName(accountName) {}
+Expense::Expense(double amount, const std::string& category, const std::string& date, bool recurring, const std::string& accountName)
+    : amount(amount), category(category), date(date), recurring(recurring), accountName(accountName) {}
 
 double Expense::getAmount() const {
     return amount;

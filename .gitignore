@@ -12,3 +12,6 @@ build/
 
 # Pliki IDE
 .vscode/
+
+# Cache wtyczki clangd
+.cache/

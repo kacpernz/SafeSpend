@@ -25,54 +25,54 @@ class MainWindow : public QMainWindow {
     Q_OBJECT
 
 private:
-    // ── Dane ─────────────────────────────────────────────────────────────────
-    Wallet      wallet;
+    // === Dane ===
+    Wallet wallet;
     std::string m_savePassword;
 
-    // ── Zakładki ──────────────────────────────────────────────────────────────
-    QTabWidget*    tabWidget;
+    // === Zakładki ===
+    QTabWidget *tabWidget;
 
-    // ── Zakładka 1: Historia ─────────────────────────────────────────────────
-    QLineEdit*     searchBar;
-    QLabel*        balanceLabel;
-    QTableWidget*  historyTable;
-    QProgressBar*  budgetBar;
-    QPushButton*   addTransactionButton;
-    QPushButton*   exportCsvButton;
+    // === Zakładka 1: Historia ===
+    QLineEdit *searchBar;
+    QLabel *balanceLabel;
+    QTableWidget *historyTable;
+    QProgressBar *budgetBar;
+    QPushButton *addTransactionButton;
+    QPushButton *exportCsvButton;
 
-    // ── Zakładka 2: Analiza ──────────────────────────────────────────────────
-    QChart*        pieChart;
-    QChart*        barChart;
-    QChartView*    chartView;
-    QPieSeries*    pieSeries;
-    QChartView*    barChartView;
-    QWidget*       envelopeWidget;
-    QVBoxLayout*   envelopeLayout;
+    // === Zakładka 2: Analiza ===
+    QChart *pieChart;
+    QChart *barChart;
+    QChartView *chartView;
+    QPieSeries *pieSeries;
+    QChartView *barChartView;
+    QWidget *envelopeWidget;
+    QVBoxLayout *envelopeLayout;
 
-    // ── Zakładka 3: Cele oszczędnościowe ─────────────────────────────────────
-    QScrollArea*   goalsScrollArea;
-    QWidget*       goalsContainer;
-    QVBoxLayout*   goalsLayout;
+    // === Zakładka 3: Cele oszczędnościowe ===
+    QScrollArea *goalsScrollArea;
+    QWidget *goalsContainer;
+    QVBoxLayout *goalsLayout;
 
-    // ── Zakładka 4: Konta (subkonta) ─────────────────────────────────────────
-    QWidget*       accountsWidget;
-    QVBoxLayout*   accountsLayout;
+    // === Zakładka 4: Konta (subkonta) ===
+    QWidget *accountsWidget;
+    QVBoxLayout *accountsLayout;
 
-    // ── Przycisk motywu (toolbar) ─────────────────────────────────────────────
-    QPushButton*   themeToggleBtn;
+    // === Przycisk motywu (toolbar) ===
+    QPushButton *themeToggleBtn;
 
-    // ── Metody wewnętrzne ─────────────────────────────────────────────────────
+    // === Metody wewnętrzne ===
     void updateChart();
     void updateBarChart();
     void updateBudgetBar();
     void updateEnvelopeBudgets();
     void refreshAccountsTab();
     void openLimitsDialog();
-    void applySearch(const QString& text);
+    void applySearch(const QString &text);
     void exportToCSV();
     void checkRecurringTransactions();
     void refreshGoalsTab();
-    QPushButton* makeButton(const QString& text, const QString& color);
+    QPushButton *makeButton(const QString &text, const QString &color);
     void refreshAll();
     void autoSave();
 
@@ -80,8 +80,8 @@ private slots:
     void onThemeChanged(bool isDark);
 
 public:
-    MainWindow(QWidget* parent = nullptr);
-    void loadWalletData(Wallet&& loadedWallet, const std::string& password);
+    MainWindow(QWidget *parent = nullptr);
+    void loadWalletData(Wallet &&loadedWallet, const std::string &password);
     void updateBalanceDisplay();
     void refreshTable();
 };

@@ -1,7 +1,7 @@
 #include "ThemeManager.hpp"
 #include <QApplication>
 
-// ─── Singleton ────────────────────────────────────────────────────────────────
+// === Singleton ===
 ThemeManager::ThemeManager(QObject* parent) : QObject(parent) {}
 
 ThemeManager* ThemeManager::instance() {
@@ -9,7 +9,7 @@ ThemeManager* ThemeManager::instance() {
     return &inst;
 }
 
-// ─── Ciemny motyw ─────────────────────────────────────────────────────────────
+// === Ciemny motyw ===
 QString ThemeManager::darkStyleSheet() {
     return R"(
         /* ── Tła główne ─────────────────────────────────────────────────── */
@@ -132,7 +132,7 @@ QString ThemeManager::darkStyleSheet() {
     )";
 }
 
-// ─── Jasny motyw ──────────────────────────────────────────────────────────────
+// === Jasny motyw ===
 QString ThemeManager::lightStyleSheet() {
     return R"(
         /* ── Tła główne ─────────────────────────────────────────────────── */
@@ -278,7 +278,7 @@ QString ThemeManager::lightStyleSheet() {
     )";
 }
 
-// ─── Publiczne metody ─────────────────────────────────────────────────────────
+// === Publiczne metody ===
 void ThemeManager::applyTheme(bool isDark) {
     m_isDark = isDark;
     qApp->setStyleSheet(isDark ? darkStyleSheet() : lightStyleSheet());

@@ -9,24 +9,23 @@ class WelcomeWindow : public QWidget {
     Q_OBJECT
 
 private:
-    QLineEdit*   passwordInput;
-    QPushButton* loginButton;
-    QPushButton* createButton;
-    QLabel*      statusLabel;
-    QLabel*      m_iconLabel;      // przechowujemy bezpośrednio, bez wyszukiwania
-    QPushButton* themeToggleBtn;
+    QLineEdit *passwordInput;
+    QPushButton *loginButton;
+    QPushButton *createButton;
+    QLabel *statusLabel;
+    QLabel *m_iconLabel;
+    QPushButton *themeToggleBtn;
 
     void onLoginClicked();
     void onCreateWalletClicked();
-    void launchMainWindow(Wallet&& wallet, const QString& password);
+    void launchMainWindow(Wallet &&wallet, const QString &password);
 
 private slots:
     void onThemeChanged(bool isDark);
 
 public:
-    explicit WelcomeWindow(QWidget* parent = nullptr);
+    explicit WelcomeWindow(QWidget *parent = nullptr);
 
 protected:
-    void paintEvent(QPaintEvent* event) override;
+    void paintEvent(QPaintEvent *event) override;
 };
-
