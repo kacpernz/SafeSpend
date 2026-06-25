@@ -6,6 +6,8 @@ set(CMAKE_AUTOMOC ON)
 set(CMAKE_AUTOUIC ON)
 set(CMAKE_AUTORCC ON)
 
+set(ICON_FILE "${CMAKE_CURRENT_SOURCE_DIR}/resources/app_icon.icns")
+
 set(SOURCES
     src/main.cpp
     src/WelcomeWindow.cpp
@@ -15,7 +17,11 @@ set(SOURCES
     src/ThemeManager.cpp
 )
 
-add_executable(SafeSpendApp ${SOURCES})
+add_executable(SafeSpendApp MACOSX_BUNDLE ${SOURCES} ${ICON_FILE})
+
+set_target_properties(SafeSpendApp PROPERTIES MACOSX_BUNDLE_ICON_FILE app_icon.icns)
+
+set_source_files_properties(${ICON_FILE} PROPERTIES MACOSX_BUNDLE_RESOURCE TRUE)
 
 target_include_directories(SafeSpendApp PRIVATE ../CoreBudget/include)
 
