@@ -39,8 +39,8 @@ SafeSpend is a native macOS desktop application for personal finance and budget 
 
 If you just want to use the application without building it from source:
 1. Go to the [Releases](../../releases) tab.
-2. Download the latest `SafeSpendApp.zip`.
-3. Extract the archive and move `SafeSpendApp.app` to your `/Applications` folder.
+2. Download the latest **`SafeSpend.dmg`** (recommended) or `SafeSpendApp.zip`.
+3. Open the `.dmg` file and drag `SafeSpendApp` into your `/Applications` folder.
 
 ## Building from Source
 
@@ -61,16 +61,14 @@ git clone https://github.com/kacpernz/SafeSpend.git
 cd SafeSpend
 ```
 
-2. Create a build directory and run CMake:
+2. Configure and build the project:
 ```bash
-mkdir build
-cd build
-cmake ..
+cmake -B build
+cmake --build build
 ```
 
-3. Compile the project:
-```bash
-make
-```
+3. The compiled executable/bundle will be available in the `build` directory.
 
-4. The executable/bundle will be available in the `build` directory.
+## License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
