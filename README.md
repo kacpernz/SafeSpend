@@ -7,6 +7,12 @@
 
 SafeSpend is a native macOS desktop application for personal finance and budget management. Built with C++ and Qt6, it provides tools for expense tracking, transaction categorization, and savings planning within a responsive graphical environment.
 
+> **Note:** The application interface is currently in Polish.
+
+<p align="center">
+  <img src="https://github.com/user-attachments/assets/039719bb-09d6-4c14-a969-55680d06c0c9" width="800" alt="Main Dashboard">
+</p>
+
 ## Key Features
 
 * **Envelope Budgeting:** Set specific spending limits with dynamic progress bars and track long-term savings goals.
@@ -14,6 +20,14 @@ SafeSpend is a native macOS desktop application for personal finance and budget 
 * **Data Visualization:** Interactive pie and bar charts powered by QtCharts.
 * **Modern UI/UX:** Clean interface with seamless, system-integrated Light and Dark mode switching.
 * **Privacy-First:** 100% offline architecture. No cloud sync, no tracking.
+
+## Screenshots
+
+<p align="center">
+  <img src="https://github.com/user-attachments/assets/2ec70e95-a53e-482a-9dab-46bf0db386d1" width="280" alt="Login Screen">
+  &nbsp;&nbsp;&nbsp;&nbsp;
+  <img src="https://github.com/user-attachments/assets/b354c48e-1806-4cab-8b60-7d77392cbec9" width="500" alt="Analysis Screen">
+</p>
 
 ## Architecture & Technologies
 
