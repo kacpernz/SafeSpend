@@ -23,6 +23,11 @@ set_target_properties(SafeSpendApp PROPERTIES MACOSX_BUNDLE_ICON_FILE app_icon.i
 
 set_source_files_properties(${ICON_FILE} PROPERTIES MACOSX_BUNDLE_RESOURCE TRUE)
 
+add_custom_command(TARGET SafeSpendApp POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E make_directory "$<TARGET_FILE_DIR:SafeSpendApp>/../Resources"
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different "${ICON_FILE}" "$<TARGET_FILE_DIR:SafeSpendApp>/../Resources/app_icon.icns"
+)
+
 target_include_directories(SafeSpendApp PRIVATE ../CoreBudget/include)
 
 target_link_libraries(SafeSpendApp PRIVATE Qt6::Widgets Qt6::Charts CoreBudget)
