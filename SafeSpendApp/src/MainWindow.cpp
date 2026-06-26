@@ -32,6 +32,8 @@
 #include <QWidget>
 #include <algorithm>
 #include <cmath>
+#include <QStandardPaths>
+#include <QDir>
 
 #include <QtCharts/QBarCategoryAxis>
 #include <QtCharts/QBarSeries>
@@ -41,6 +43,17 @@
 #include <QtCharts/QPieSeries>
 #include <QtCharts/QPieSlice>
 #include <QtCharts/QValueAxis>
+
+// === Zwraca bezpieczną, bezwzględną ścieżkę do pliku bazy danych ===
+// Na macOS: ~/Library/Application Support/SafeSpend/finanse_baza.bin
+static std::string getDbPath() {
+    const QString appDataDir =
+        QStandardPaths::writableLocation(QStandardPaths::AppDataLocation);
+    QDir dir(appDataDir);
+    if (!dir.exists())
+        dir.mkpath(".");
+    return (appDataDir + "/finanse_baza.bin").toStdString();
+}
 
 
 // === Pomocnicze ===
@@ -83,7 +96,7 @@ void MainWindow::autoSave() {
     return;
   DatabaseManager dbManager;
   try {
-    dbManager.saveWallet(wallet, "finanse_baza.bin", m_savePassword);
+    dbManager.saveWallet(wallet, getDbPath(), m_savePassword);
   } catch (const DatabaseException &e) {
     // Zapisujemy cicho; błąd wyświetlamy tylko jeśli użytkownik nacisnął Ctrl+S
     Q_UNUSED(e)
@@ -490,7 +503,7 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent) {
       return;
     DatabaseManager dbManager;
     try {
-      dbManager.saveWallet(wallet, "finanse_baza.bin", m_savePassword);
+      dbManager.saveWallet(wallet, getDbPath(), m_savePassword);
       statusBar()->showMessage("✔  Dane zapisane pomyślnie", 3000);
     } catch (const DatabaseException &e) {
       QMessageBox::critical(this, "Błąd zapisu",

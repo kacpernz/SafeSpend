@@ -17,6 +17,19 @@
 #include <QLinearGradient>
 #include <QFont>
 #include <QGraphicsDropShadowEffect>
+#include <QStandardPaths>
+#include <QDir>
+
+// === Zwraca bezpieczną, bezwzględną ścieżkę do pliku bazy danych ===
+// Na macOS: ~/Library/Application Support/SafeSpend/finanse_baza.bin
+static std::string getDbPath() {
+    const QString appDataDir =
+        QStandardPaths::writableLocation(QStandardPaths::AppDataLocation);
+    QDir dir(appDataDir);
+    if (!dir.exists())
+        dir.mkpath(".");
+    return (appDataDir + "/finanse_baza.bin").toStdString();
+}
 
 // === helper: shadow ===
 static void addShadow(QWidget* w, QColor color = QColor(0, 0, 0, 120), int blur = 18) {
@@ -251,7 +264,7 @@ void WelcomeWindow::onLoginClicked() {
     DatabaseManager dbManager;
     try {
         Wallet loadedWallet;
-        dbManager.loadWallet(loadedWallet, "finanse_baza.bin", password.toStdString());
+        dbManager.loadWallet(loadedWallet, getDbPath(), password.toStdString());
         launchMainWindow(std::move(loadedWallet), password);
 
     } catch (const DatabaseException& e) {
@@ -289,7 +302,7 @@ void WelcomeWindow::onCreateWalletClicked() {
     Wallet emptyWallet;
 
     try {
-        dbManager.saveWallet(emptyWallet, "finanse_baza.bin", password.toStdString());
+        dbManager.saveWallet(emptyWallet, getDbPath(), password.toStdString());
     } catch (const DatabaseException& e) {
         QMessageBox::critical(this, "Błąd zapisu",
             QString("Nie udało się utworzyć pliku portfela.\n\nSzczegóły: %1")
