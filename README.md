@@ -43,7 +43,7 @@ brew install cmake qt@6
 
 1. Clone the repository:
 ```bash
-git clone [https://github.com/kacpernz/SafeSpend.git](https://github.com/kacpernz/SafeSpend.git)
+git clone https://github.com/kacpernz/SafeSpend.git
 cd SafeSpend
 ```
 
